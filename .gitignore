@@ -181,3 +181,5 @@ dmypy.json
 
 ## current project files
 datasets/
+cache/
+output/
