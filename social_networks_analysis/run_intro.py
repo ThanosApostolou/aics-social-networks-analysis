@@ -14,12 +14,13 @@ import constants
 
 
 class RunIntroOutput:
-    def __init__(self, sx_df: pd.DataFrame, t_min: int64, t_max: int64, DT: int64, dt: float64):
+    def __init__(self, sx_df: pd.DataFrame, t_min: int64, t_max: int64, DT: int64, dt: float64, time_spans: list[int64]):
         self.sx_df = sx_df
         self.t_min = t_min
         self.t_max = t_max
         self.DT = DT
         self.dt = dt
+        self.time_spans = time_spans
 
 
 def download_and_extract_dataset(dataset_path: Path):
@@ -58,6 +59,9 @@ def read_df(dataset_path: Path) -> pd.DataFrame:
 
 def run_intro() -> RunIntroOutput:
     logging.debug("start intro")
+    output_dir_path = Path(constants.OUTPUT_DIR)
+    if not Path.exists(output_dir_path):
+        Path.mkdir(output_dir_path, parents=True, exist_ok=True)
     cache_dir_path = Path(constants.CACHE_DIR)
     if not Path.exists(cache_dir_path):
         Path.mkdir(cache_dir_path, parents=True, exist_ok=True)
@@ -92,8 +96,13 @@ def run_intro() -> RunIntroOutput:
     dt: float64 = DT / constants.N
     logging.info(f"t_min={t_min}, t_max={t_max}, DT={DT}, dt={dt}")
 
+    time_spans: list[int64] = [
+        int64(np.ceil(t)) for t in np.arange(t_min, t_max, dt, dtype=float64)]
+    if time_spans[len(time_spans) - 1] < t_max:
+        time_spans.append(t_max + 1)
+
     logging.debug("end intro")
-    run_intro_output = RunIntroOutput(sx_df, t_min, t_max, DT, dt)
+    run_intro_output = RunIntroOutput(sx_df, t_min, t_max, DT, dt, time_spans)
     with open(cache_run_intro_output_path, "wb") as cache_run_intro_output_file:
         pickle.dump(run_intro_output, cache_run_intro_output_file)
         cache_run_intro_output_file.close()

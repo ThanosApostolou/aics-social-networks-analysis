@@ -2,16 +2,20 @@
 name = "aics-social-networks-analysis"
 version = "0.1.0"
 description = ""
-authors = ["ThanosApostolou <thanosapostolou@outlook.com>", "GeorgeBirb <todo@outlook.com>"]
+authors = [
+    "ThanosApostolou <thanosapostolou@outlook.com>",
+    "GeorgeBirb <todo@outlook.com>",
+]
 readme = "README.md"
-packages = [{include = "social_networks_analysis"}]
+packages = [{ include = "social_networks_analysis" }]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "~3.11"
 pandas = "~2.0.1"
 numpy = "~1.24.3"
 networkx = "~3.1"
 matplotlib = "~3.7.1"
+scipy = "~1.11.1"
 
 
 [tool.poetry.group.dev.dependencies]
