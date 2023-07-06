@@ -6,6 +6,7 @@ from pandas import DataFrame
 import numpy as np
 from numpy import int64, float64
 import networkx as nx
+from matplotlib import pyplot as plt
 
 from run_intro import RunIntroOutput
 import constants
@@ -24,9 +25,19 @@ class RunPart1Input:
         return f"sx_df: {self.sx_df}\nt_min: {self.t_min}\nt_max: {self.t_max}\nDT={self.DT}\ndt={self.dt}"
 
 
+def plot_histogram(data: list, index: int, type: str, plots_dir: Path, block: bool = False):
+    plt.figure(1)
+    name = f"Graph{index}_{type}"
+    plt.suptitle(f"{name}")
+    plt.hist(data, bins=10, color='blue')
+    figure_file: Path = Path(plots_dir).joinpath(f"{name}.png")
+    plt.savefig(figure_file)
+    plt.show(block=block)
+
+
 def create_network(t_low: int64, t_upper: int64, sx_df: DataFrame, index: int, part1_output_dir: Path):
     logging.debug(
-        f"creating Graph between t_low {t_low} and t_upper {t_upper}")
+        f"creating Graph{index} between t_low {t_low} and t_upper {t_upper}")
     sx_in_timespan = sx_df[(sx_df[constants.DFCOL_UNIXTS]
                             >= t_low) & (sx_df[constants.DFCOL_UNIXTS] < t_upper)]
 
@@ -37,9 +48,51 @@ def create_network(t_low: int64, t_upper: int64, sx_df: DataFrame, index: int, p
     # graph.add_edges_from(edges)
     graph_dict = utils.graph_dict_from_df(sx_in_timespan)
     graph = nx.Graph(graph_dict)
+    if constants.SHOULD_PLOT_GRAPH:
+        logging.debug(
+            f"plotting Graph{index} t_low {t_low}, t_upper {t_upper}")
+        utils.plot_graph(
+            graph, name=f"Graph{index}", plots_dir=part1_output_dir)
+
     logging.debug(
-        f"ploting Graph between t_low {t_low} and t_upper {t_upper}")
-    utils.plot_graph(graph, name=f"Graph{index}", plots_dir=part1_output_dir)
+        f"calculating Graph{index} t_low {t_low}, t_upper {t_upper} degree_centrality")
+    degree_centrality_dict = nx.degree_centrality(graph)
+    degree_centrality_list = [val for val in degree_centrality_dict.values()]
+    plot_histogram(degree_centrality_list, index,
+                   "DegreeCentrality", part1_output_dir)
+
+    logging.debug(
+        f"calculating Graph{index} t_low {t_low}, t_upper {t_upper} closeness_centrality")
+    closeness_centrality_dict = nx.closeness_centrality(graph)
+    closeness_centrality_list = [
+        val for val in closeness_centrality_dict.values()]
+    plot_histogram(closeness_centrality_list, index,
+                   "ClosenessCentrality", part1_output_dir)
+
+    logging.debug(
+        f"calculating Graph{index} t_low {t_low}, t_upper {t_upper} betweenness_centrality")
+    betweenness_centrality_dict = nx.betweenness_centrality(graph)
+    betweenness_centrality_list = [
+        val for val in betweenness_centrality_dict.values()]
+    plot_histogram(betweenness_centrality_list, index,
+                   "BetweenessCentrality", part1_output_dir)
+
+    logging.debug(
+        f"calculating Graph{index} t_low {t_low}, t_upper {t_upper} eigenvector_centrality")
+    eigenvector_centrality_dict = nx.eigenvector_centrality(graph)
+    eigenvector_centrality_list = [
+        val for val in eigenvector_centrality_dict.values()]
+    plot_histogram(eigenvector_centrality_list, index,
+                   "EigenvectorCentrality", part1_output_dir)
+
+    logging.debug(
+        f"calculating Graph{index} t_low {t_low}, t_upper {t_upper} katz_centrality")
+    katz_centrality_dict = nx.katz_centrality(
+        graph, max_iter=100000, tol=1.0)
+    katz_centrality_list = [
+        val for val in katz_centrality_dict.values()]
+    plot_histogram(katz_centrality_list, index,
+                   "KatzCentrality", part1_output_dir)
     # logging.debug('nodes')
     # logging.debug(nodes)
     # logging.debug('edges')
@@ -53,19 +106,20 @@ def run_part1(run_part1_input: RunPart1Input):
         Path.mkdir(part1_output_dir, exist_ok=True, parents=True)
 
     # neighbors = {
-    #     1: set([2]),
-    #     2: set([1, 2]),
-    #     3: set([2]),
+    #     1: set([2, 3, 5, 6, 7, 8]),
+    #     2: set([1]),
+    #     3: set([2, 9]),
     #     4: set()
     # }
     # graph = nx.Graph(neighbors)
     # utils.plot_graph(graph)
     # return
-    show_time_spans = run_part1_input.time_spans[-constants.SHOW_N:]
+    # show_time_spans = run_part1_input.time_spans[-constants.SHOW_N:]
+    time_spans = run_part1_input.time_spans
 
-    for index, t_low in enumerate(show_time_spans):
-        if index < len(show_time_spans) - 1:
-            t_upper = show_time_spans[index+1]
+    for index, t_low in enumerate(time_spans):
+        if index < len(time_spans) - 1 and (index < constants.SHOW_N or index >= len(time_spans) - 1 - constants.SHOW_N):
+            t_upper = time_spans[index+1]
             create_network(t_low, t_upper, run_part1_input.sx_df,
                            index, part1_output_dir)
 
