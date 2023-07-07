@@ -10,6 +10,7 @@ from numpy.typing import NDArray
 from pathlib import Path
 import pickle
 
+import utils
 import constants
 
 
@@ -68,12 +69,11 @@ def run_intro() -> RunIntroOutput:
 
     cache_run_intro_output_path = cache_dir_path.joinpath(
         "cache_run_intro_output")
-    if constants.USE_CACHE_INTRO and Path.exists(cache_run_intro_output_path):
-        with open(cache_run_intro_output_path, "rb") as cache_run_intro_output_file:
-            cache_run_intro_output: RunIntroOutput = pickle.load(
-                cache_run_intro_output_file)
-            cache_run_intro_output_file.close()
-            return cache_run_intro_output
+
+    cache_run_intro_output: RunIntroOutput | None = utils.load_from_cache(
+        cache_run_intro_output_path, constants.USE_CACHE_INTRO)
+    if cache_run_intro_output is not None:
+        return cache_run_intro_output
 
     dataset_path = Path(constants.DATASETS_DIR).joinpath(
         constants.DATASET_NAME)
@@ -103,8 +103,5 @@ def run_intro() -> RunIntroOutput:
 
     logging.debug("end intro")
     run_intro_output = RunIntroOutput(sx_df, t_min, t_max, DT, dt, time_spans)
-    with open(cache_run_intro_output_path, "wb") as cache_run_intro_output_file:
-        pickle.dump(run_intro_output, cache_run_intro_output_file)
-        cache_run_intro_output_file.close()
-
+    utils.dump_to_cache(cache_run_intro_output_path, run_intro_output)
     return run_intro_output

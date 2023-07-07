@@ -1,4 +1,5 @@
 from pathlib import Path
+import pickle
 import networkx as nx
 import matplotlib.pyplot as plt
 import math
@@ -7,8 +8,24 @@ import numpy as np
 from numpy import int64
 from numpy.typing import NDArray
 import logging
-
+from typing import Any
 import constants
+
+
+def load_from_cache(cache_file_path: Path, use_cache: bool) -> Any | None:
+    if use_cache and Path.exists(cache_file_path):
+        with open(cache_file_path, "rb") as cache_file:
+            cache_run_intro_output = pickle.load(cache_file)
+            cache_file.close()
+            return cache_run_intro_output
+    else:
+        return None
+
+
+def dump_to_cache(cache_file_path: Path, data: Any):
+    with open(cache_file_path, "wb") as cache_file:
+        pickle.dump(data, cache_file)
+        cache_file.close()
 
 
 def plot_graph(G: nx.classes.Graph, name: str = "Graph", with_labels: bool = False, block: bool = False, font_size: int = 6, plots_dir: Path = Path(constants.OUTPUT_DIR)):
