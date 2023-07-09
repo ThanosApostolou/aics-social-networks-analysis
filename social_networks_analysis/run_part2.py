@@ -12,8 +12,10 @@ import math
 from run_intro import RunIntroOutput
 import constants
 
+# TODO
 
-class RunPart1Input:
+
+class RunPart2Input:
     def __init__(self, sx_df: pd.DataFrame, t_min: int64, t_max: int64, DT: int64, dt: float64, time_spans: list[int64]):
         self.sx_df = sx_df
         self.t_min = t_min
@@ -53,11 +55,11 @@ def plot_histogram(data: list, index: int, type: str, plots_dir: Path, block: bo
     plt.show(block=block)
 
 
-def create_network(t_low: int64, t_upper: int64, sx_df: DataFrame, index: int) -> nx.Graph:
+def create_networks(t_low: int64, t_mid: int64, t_upper: int64, sx_df: DataFrame, index: int, part1_output_dir: Path, part1_cache_dir: Path):
     logging.debug(
-        f"creating Graph{index} between t_low {t_low} and t_upper {t_upper}")
+        f"creating Graph{index} between t_low {t_low} and t_upper {t_mid}")
     sx_in_timespan = sx_df[(sx_df[constants.DFCOL_UNIXTS]
-                            >= t_low) & (sx_df[constants.DFCOL_UNIXTS] < t_upper)]
+                            >= t_low) & (sx_df[constants.DFCOL_UNIXTS] < t_mid)]
 
     # nodes = utils.nodes_from_df(sx_in_timespan)
     # edges = utils.edges_from_df(sx_in_timespan)
@@ -66,13 +68,9 @@ def create_network(t_low: int64, t_upper: int64, sx_df: DataFrame, index: int) -
     # graph.add_edges_from(edges)
     graph_dict = utils.graph_dict_from_df(sx_in_timespan)
     graph = nx.Graph(graph_dict)
-    return graph
-
-
-def calculate_centralities(graph: nx.Graph, t_low: int64, t_upper: int64, index: int, part1_output_dir: Path, part1_cache_dir: Path):
     if constants.SHOULD_PLOT_GRAPH:
         logging.debug(
-            f"plotting Graph{index} t_low {t_low}, t_upper {t_upper}")
+            f"plotting Graph{index} t_low {t_low}, t_upper {t_mid}")
         utils.plot_graph(
             graph, name=f"Graph{index}", plots_dir=part1_output_dir)
 
@@ -82,7 +80,7 @@ def calculate_centralities(graph: nx.Graph, t_low: int64, t_upper: int64, index:
         cache_file, constants.USE_CACHE_PART1_DATA)
     if degree_centrality_list is None:
         logging.debug(
-            f"calculating Graph{index} t_low {t_low}, t_upper {t_upper} degree_centrality")
+            f"calculating Graph{index} t_low {t_low}, t_upper {t_mid} degree_centrality")
         degree_centrality_dict = nx.degree_centrality(graph)
         degree_centrality_list = [
             val for val in degree_centrality_dict.values()]
@@ -97,7 +95,7 @@ def calculate_centralities(graph: nx.Graph, t_low: int64, t_upper: int64, index:
         cache_file, constants.USE_CACHE_PART1_DATA)
     if closeness_centrality_list is None:
         logging.debug(
-            f"calculating Graph{index} t_low {t_low}, t_upper {t_upper} closeness_centrality")
+            f"calculating Graph{index} t_low {t_low}, t_upper {t_mid} closeness_centrality")
         closeness_centrality_dict = nx.closeness_centrality(graph)
         closeness_centrality_list = [
             val for val in closeness_centrality_dict.values()]
@@ -113,7 +111,7 @@ def calculate_centralities(graph: nx.Graph, t_low: int64, t_upper: int64, index:
         cache_file, constants.USE_CACHE_PART1_DATA)
     if betweenness_centrality_list is None:
         logging.debug(
-            f"calculating Graph{index} t_low {t_low}, t_upper {t_upper} betweenness_centrality")
+            f"calculating Graph{index} t_low {t_low}, t_upper {t_mid} betweenness_centrality")
         betweenness_centrality_dict = nx.betweenness_centrality(graph)
         betweenness_centrality_list = [
             val for val in betweenness_centrality_dict.values()]
@@ -129,7 +127,7 @@ def calculate_centralities(graph: nx.Graph, t_low: int64, t_upper: int64, index:
         cache_file, constants.USE_CACHE_PART1_DATA)
     if eigenvector_centrality_list is None:
         logging.debug(
-            f"calculating Graph{index} t_low {t_low}, t_upper {t_upper} eigenvector_centrality")
+            f"calculating Graph{index} t_low {t_low}, t_upper {t_mid} eigenvector_centrality")
         eigenvector_centrality_dict = nx.eigenvector_centrality(
             graph, tol=0.00001)
         eigenvector_centrality_list = [
@@ -145,7 +143,7 @@ def calculate_centralities(graph: nx.Graph, t_low: int64, t_upper: int64, index:
         cache_file, constants.USE_CACHE_PART1_DATA)
     if katz_centrality_list is None:
         logging.debug(
-            f"calculating Graph{index} t_low {t_low}, t_upper {t_upper} katz_centrality")
+            f"calculating Graph{index} t_low {t_low}, t_upper {t_mid} katz_centrality")
         katz_centrality_dict = nx.katz_centrality(
             graph, max_iter=100000, tol=1.0)
         katz_centrality_list = [
@@ -156,21 +154,7 @@ def calculate_centralities(graph: nx.Graph, t_low: int64, t_upper: int64, index:
                    "KatzCentrality", part1_output_dir)
 
 
-def plot_nodes_or_edges(plots_dir: Path, indexes: list[int], all_nodes_or_edges: list[int], name: str, block: bool = False):
-    plt.clf()
-    logging.debug(f"plotting {name}")
-    plt.suptitle(f"{name}")
-    x = [index for index in range(0, len(all_nodes_or_edges), 1)]
-    plt.bar(x, all_nodes_or_edges, 1, color="blue")
-    plt.xlabel("graph timespan")
-    plt.ylabel(f"{name}")
-    plt.xticks(x, indexes)
-    figure_file: Path = Path(plots_dir).joinpath(f"{name}.png")
-    plt.savefig(figure_file)
-    plt.show(block=block)
-
-
-def run_part1(run_part1_input: RunPart1Input):
+def run_part2(run_part2_input: RunPart2Input):
     logging.debug("start part1")
     part1_output_dir = Path(constants.OUTPUT_DIR).joinpath("part1")
     if not Path.exists(part1_output_dir):
@@ -182,30 +166,14 @@ def run_part1(run_part1_input: RunPart1Input):
     if constants.USE_CACHE_PART1:
         return
 
-    time_spans = run_part1_input.time_spans
+    time_spans = run_part2_input.time_spans
     mid = len(time_spans) // 2 - \
         1 if len(time_spans) % 2 == 0 else len(time_spans) // 2
-    all_nodes: list[int] = []
-    all_edges: list[int] = []
-    indexes: list[int] = []
     for index, t_low in enumerate(time_spans):
-        if index < len(time_spans) - 1:
-            should_show_nodes_edges = index < constants.N_SHOW_NODES_EDGES or (
-                index >= mid and index < mid + constants.N_SHOW_NODES_EDGES) or index >= len(time_spans) - 1 - constants.N_SHOW_NODES_EDGES
-            if should_show_nodes_edges:
-                t_upper = time_spans[index+1]
-                graph = create_network(t_low, t_upper, run_part1_input.sx_df,
-                                       index)
-                indexes.append(index)
-                all_nodes.append(len(graph.nodes))
-                all_edges.append(len(graph.edges))
-                should_calculate_centralities = index < constants.N_SHOW_HISTOGRAMS or (
-                    index >= mid and index < mid + constants.N_SHOW_HISTOGRAMS) or index >= len(time_spans) - 1 - constants.N_SHOW_HISTOGRAMS
-                if should_calculate_centralities:
-                    calculate_centralities(graph, t_low, t_upper,
-                                           index, part1_output_dir, part1_cache_dir)
-
-    plot_nodes_or_edges(part1_output_dir, indexes, all_nodes, "Nodes")
-    plot_nodes_or_edges(part1_output_dir, indexes, all_edges, "Edges")
+        if index < len(time_spans) - 2 and (index < constants.N_SHOW_HISTOGRAMS or (index >= mid and index < mid + constants.N_SHOW_HISTOGRAMS) or index >= len(time_spans) - 1 - constants.N_SHOW_HISTOGRAMS):
+            t_mid = time_spans[index+1]
+            t_upper = time_spans[index+2]
+            create_networks(t_low, t_mid, t_upper, run_part2_input.sx_df,
+                            index, part1_output_dir, part1_cache_dir)
 
     logging.debug("end part1")
