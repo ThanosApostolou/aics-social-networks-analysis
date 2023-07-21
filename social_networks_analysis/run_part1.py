@@ -162,7 +162,7 @@ def plot_nodes_or_edges(plots_dir: Path, indexes: list[int], all_nodes_or_edges:
     plt.suptitle(f"{name}")
     x = [index for index in range(0, len(all_nodes_or_edges), 1)]
     plt.bar(x, all_nodes_or_edges, 1, color="blue")
-    plt.xlabel("graph timespan")
+    plt.xlabel("graph index")
     plt.ylabel(f"{name}")
     plt.xticks(x, indexes)
     figure_file: Path = Path(plots_dir).joinpath(f"{name}.png")
@@ -194,8 +194,6 @@ def run_part1(run_part1_input: RunPart1Input):
     show_part1_indexes_set = set(show_part1_indexes)
     for index, t_low in enumerate(time_spans):
         if index < len(time_spans) - 1:
-            # should_show_nodes_edges = index < constants.N_SHOW_PART1 or (
-            #     index >= mid and index < mid + constants.N_SHOW_PART1) or index >= len(time_spans) - 1 - constants.N_SHOW_PART1
             if index in show_part1_indexes_set:
                 t_upper = time_spans[index+1]
                 graph = create_network(t_low, t_upper, run_part1_input.sx_df,
@@ -203,12 +201,12 @@ def run_part1(run_part1_input: RunPart1Input):
                 indexes.append(index)
                 all_nodes.append(len(graph.nodes))
                 all_edges.append(len(graph.edges))
-                # should_calculate_centralities = index < constants.N_SHOW_HISTOGRAMS or (
-                #     index >= mid and index < mid + constants.N_SHOW_HISTOGRAMS) or index >= len(time_spans) - 1 - constants.N_SHOW_HISTOGRAMS
-                # if should_calculate_centralities:
                 calculate_centralities(graph, t_low, t_upper,
                                        index, part1_output_dir, part1_cache_dir)
 
+    print('indexes', indexes)
+    print('all_nodes', all_nodes)
+    print('all_edges', all_edges)
     plot_nodes_or_edges(part1_output_dir, indexes, all_nodes, "Nodes")
     plot_nodes_or_edges(part1_output_dir, indexes, all_edges, "Edges")
 
