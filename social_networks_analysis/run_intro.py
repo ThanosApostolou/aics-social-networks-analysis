@@ -98,7 +98,7 @@ def run_intro() -> RunIntroOutput:
 
     time_spans: list[int64] = [
         int64(np.ceil(t)) for t in np.arange(t_min, t_max, dt, dtype=float64)]
-    if time_spans[len(time_spans) - 1] < t_max:
+    if time_spans[-1] < t_max:
         time_spans.append(t_max + 1)
 
     logging.debug("end intro")

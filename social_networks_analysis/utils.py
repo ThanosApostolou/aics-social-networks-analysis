@@ -94,3 +94,12 @@ def graph_dict_from_df(sx_df: DataFrame) -> dict[int64, set[int64]]:
         if (src != dst):
             graph_dict[src].add(dst)
     return graph_dict
+
+
+def parts_indexes_from_list(mylist: list, n_indexes: int) -> list[int]:
+    step = math.ceil(len(mylist) / (n_indexes - 1))
+    indexes = [i for i in range(0, len(mylist) - 1, step)]
+    if indexes[-1] < len(mylist) - 1:
+        indexes.append(len(mylist) - 1)
+
+    return indexes

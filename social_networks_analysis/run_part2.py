@@ -166,14 +166,14 @@ def run_part2(run_part2_input: RunPart2Input):
     if constants.USE_CACHE_PART1:
         return
 
-    time_spans = run_part2_input.time_spans
-    mid = len(time_spans) // 2 - \
-        1 if len(time_spans) % 2 == 0 else len(time_spans) // 2
-    for index, t_low in enumerate(time_spans):
-        if index < len(time_spans) - 2 and (index < constants.N_SHOW_HISTOGRAMS or (index >= mid and index < mid + constants.N_SHOW_HISTOGRAMS) or index >= len(time_spans) - 1 - constants.N_SHOW_HISTOGRAMS):
-            t_mid = time_spans[index+1]
-            t_upper = time_spans[index+2]
-            create_networks(t_low, t_mid, t_upper, run_part2_input.sx_df,
-                            index, part1_output_dir, part1_cache_dir)
+    # time_spans = run_part2_input.time_spans
+    # mid = len(time_spans) // 2 - \
+    #     1 if len(time_spans) % 2 == 0 else len(time_spans) // 2
+    # for index, t_low in enumerate(time_spans):
+    #     if index < len(time_spans) - 2 and (index < constants.N_SHOW_HISTOGRAMS or (index >= mid and index < mid + constants.N_SHOW_HISTOGRAMS) or index >= len(time_spans) - 1 - constants.N_SHOW_HISTOGRAMS):
+    #         t_mid = time_spans[index+1]
+    #         t_upper = time_spans[index+2]
+    #         create_networks(t_low, t_mid, t_upper, run_part2_input.sx_df,
+    #                         index, part1_output_dir, part1_cache_dir)
 
     logging.debug("end part1")

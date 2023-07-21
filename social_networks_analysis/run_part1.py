@@ -188,22 +188,26 @@ def run_part1(run_part1_input: RunPart1Input):
     all_nodes: list[int] = []
     all_edges: list[int] = []
     indexes: list[int] = []
+    # calculate which indexes to show. The last element is the upper limit of the last graph so it is excluded.
+    show_part1_indexes = utils.parts_indexes_from_list(
+        time_spans[:-1], constants.N_SHOW_PART1)
+    show_part1_indexes_set = set(show_part1_indexes)
     for index, t_low in enumerate(time_spans):
         if index < len(time_spans) - 1:
-            should_show_nodes_edges = index < constants.N_SHOW_NODES_EDGES or (
-                index >= mid and index < mid + constants.N_SHOW_NODES_EDGES) or index >= len(time_spans) - 1 - constants.N_SHOW_NODES_EDGES
-            if should_show_nodes_edges:
+            # should_show_nodes_edges = index < constants.N_SHOW_PART1 or (
+            #     index >= mid and index < mid + constants.N_SHOW_PART1) or index >= len(time_spans) - 1 - constants.N_SHOW_PART1
+            if index in show_part1_indexes_set:
                 t_upper = time_spans[index+1]
                 graph = create_network(t_low, t_upper, run_part1_input.sx_df,
                                        index)
                 indexes.append(index)
                 all_nodes.append(len(graph.nodes))
                 all_edges.append(len(graph.edges))
-                should_calculate_centralities = index < constants.N_SHOW_HISTOGRAMS or (
-                    index >= mid and index < mid + constants.N_SHOW_HISTOGRAMS) or index >= len(time_spans) - 1 - constants.N_SHOW_HISTOGRAMS
-                if should_calculate_centralities:
-                    calculate_centralities(graph, t_low, t_upper,
-                                           index, part1_output_dir, part1_cache_dir)
+                # should_calculate_centralities = index < constants.N_SHOW_HISTOGRAMS or (
+                #     index >= mid and index < mid + constants.N_SHOW_HISTOGRAMS) or index >= len(time_spans) - 1 - constants.N_SHOW_HISTOGRAMS
+                # if should_calculate_centralities:
+                calculate_centralities(graph, t_low, t_upper,
+                                       index, part1_output_dir, part1_cache_dir)
 
     plot_nodes_or_edges(part1_output_dir, indexes, all_nodes, "Nodes")
     plot_nodes_or_edges(part1_output_dir, indexes, all_edges, "Edges")
