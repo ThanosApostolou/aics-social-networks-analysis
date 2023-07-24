@@ -59,13 +59,15 @@ def create_network(t_low: int64, t_upper: int64, sx_df: DataFrame, index: int) -
     sx_in_timespan = sx_df[(sx_df[constants.DFCOL_UNIXTS]
                             >= t_low) & (sx_df[constants.DFCOL_UNIXTS] < t_upper)]
 
-    # nodes = utils.nodes_from_df(sx_in_timespan)
-    # edges = utils.edges_from_df(sx_in_timespan)
-    # graph = nx.Graph()
-    # graph.add_nodes_from(nodes)
-    # graph.add_edges_from(edges)
-    graph_dict = utils.graph_dict_from_df(sx_in_timespan)
-    graph = nx.Graph(graph_dict)
+    nodes = utils.nodes_from_df(sx_in_timespan)
+    edges = utils.edges_from_df(sx_in_timespan)
+    graph = nx.Graph()
+    graph.add_nodes_from(nodes)
+    graph.add_edges_from(edges)
+    # graph.remove_edges_from(nx.selfloop_edges(graph))
+
+    # graph_dict = utils.graph_dict_from_df(sx_in_timespan)
+    # graph = nx.Graph(graph_dict)
     return graph
 
 
@@ -183,8 +185,6 @@ def run_part1(run_part1_input: RunPart1Input):
         return
 
     time_spans = run_part1_input.time_spans
-    mid = len(time_spans) // 2 - \
-        1 if len(time_spans) % 2 == 0 else len(time_spans) // 2
     all_nodes: list[int] = []
     all_edges: list[int] = []
     indexes: list[int] = []
