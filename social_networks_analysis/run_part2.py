@@ -5,6 +5,7 @@ import pandas as pd
 from pandas import DataFrame
 import numpy as np
 from numpy import int64, float64
+from numpy.typing import NDArray
 import networkx as nx
 from matplotlib import pyplot as plt
 import math
@@ -35,9 +36,9 @@ def create_networks(t_low: int64, t_mid: int64, t_upper: int64, sx_df: DataFrame
                             >= t_low) & (sx_df[constants.DFCOL_UNIXTS] < t_upper)]
 
     sx_in_tlow = sx_in_timespan[(sx_in_timespan[constants.DFCOL_UNIXTS]
-                        >= t_low) & (sx_in_timespan[constants.DFCOL_UNIXTS] < t_mid)]
+                                 >= t_low) & (sx_in_timespan[constants.DFCOL_UNIXTS] < t_mid)]
     sx_in_tupper = sx_in_timespan[(sx_in_timespan[constants.DFCOL_UNIXTS]
-                          >= t_mid) & (sx_in_timespan[constants.DFCOL_UNIXTS] < t_upper)]
+                                   >= t_mid) & (sx_in_timespan[constants.DFCOL_UNIXTS] < t_upper)]
 
     nodes = utils.nodes_from_df(sx_in_timespan)
     # graph tlow
@@ -93,6 +94,80 @@ def plot_edges(plots_dir: Path, indexes: list[int], all_edges_tlow: list[int], a
     plt.show(block=block)
 
 
+def get_id_index_dicts(nodes: NDArray[int64]) -> tuple[dict[int64, int64], dict[int64, int64]]:
+    nodes.sort()
+    index_to_id_dict: dict[int64, int64] = {}
+    id_to_index_dict: dict[int64, int64] = {}
+    for index, node in enumerate(nodes):
+        index_to_id_dict[int64(index)] = node
+        id_to_index_dict[node] = int64(index)
+
+    return index_to_id_dict, id_to_index_dict
+
+
+def distance_dict_to_ndarray(nodes_len: int, id_to_index_dict: dict[int64, int64], distance_dict: dict[int64, dict[int64, int64]]) -> NDArray[float64]:
+    distance_array: NDArray[float64] = np.zeros(
+        shape=(nodes_len, nodes_len), dtype=float64)
+    for source, target_dict in distance_dict.items():
+        source_index = id_to_index_dict[source]
+        for target, value in target_dict.items():
+            target_index = id_to_index_dict[target]
+            distance_array[source_index, target_index] = float64(value)
+
+    return distance_array
+
+
+def calculate_sdg_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[int64, int64]) -> NDArray[float64]:
+    dgeodesic = nx.shortest_path_length(graph)
+    dgeodesic.to_numpy_array()
+    dgeodesic_dict: dict[int64, dict[int64, int64]] = dict(dgeodesic)
+    dgeodesic_array = distance_dict_to_ndarray(
+        nodes_len, id_to_index_dict, dgeodesic_dict)
+    sdg_array: NDArray[float64] = np.negative(dgeodesic_array)
+    return sdg_array
+
+
+def networks_calculations(graph_tlow: nx.Graph, graph_tupper: nx.Graph):
+    nodes: NDArray[int64] = np.array(graph_tlow.nodes)
+    nodes.sort()
+    nodes_len: int = len(nodes)
+    index_to_id_dict, id_to_index_dict = get_id_index_dicts(nodes)
+    # tlow
+    adjacency_matrix_tlow = nx.to_numpy_array(
+        graph_tlow, nodelist=sorted(graph_tlow.nodes()))
+    sdg_array_tlow = calculate_sdg_array(
+        graph_tlow, nodes_len, id_to_index_dict)
+
+    # TODO
+    # b) Scn
+    # c) Sjc
+    # d) Sa
+    # e) Spa
+
+    # tupper
+    adjacency_matrix_tupper = nx.to_numpy_array(
+        graph_tupper, nodelist=sorted(graph_tupper.nodes()))
+    sdg_array_tupper = calculate_sdg_array(
+        graph_tupper, nodes_len, id_to_index_dict)
+
+    print(adjacency_matrix_tlow[20])
+    print(adjacency_matrix_tupper)
+
+    print(sdg_array_tlow)
+    print(sdg_array_tupper)
+
+    # assertions for logic consistency
+    assert (adjacency_matrix_tlow == adjacency_matrix_tlow.T).all(
+    ), "part2->networks_calculations: adjacency_matrix_tlow should be symetrical"
+    assert (adjacency_matrix_tupper == adjacency_matrix_tupper.T).all(
+    ), "part2->networks_calculations: adjacency_matrix_tupper should be symetrical"
+
+    assert (sdg_array_tlow == sdg_array_tlow.T).all(
+    ), "part2->networks_calculations: sdg_array_tlow should be symetrical"
+    assert (sdg_array_tupper == sdg_array_tupper.T).all(
+    ), "part2->networks_calculations: sdg_array_tupper should be symetrical"
+
+
 def run_part2(run_part2_input: RunPart2Input):
     logging.debug("start part2")
     part2_output_dir = Path(constants.OUTPUT_DIR).joinpath("part2")
@@ -130,11 +205,16 @@ def run_part2(run_part2_input: RunPart2Input):
                 all_edges_tlow.append(len(graph_tlow.edges))
                 all_edges_tupper.append(len(graph_tupper.edges))
 
+                # if index == show_part2_indexes[-1]:
+                if index == 0:
+                    networks_calculations(graph_tlow, graph_tupper)
+
     print('indexes', indexes)
     print('all_nodes', all_nodes)
     print('all_edges', all_edges_tlow)
     plot_nodes(part2_output_dir, indexes, all_nodes, "Nodes")
-    plot_edges(part2_output_dir, indexes, all_edges_tlow, all_edges_tupper, "Edges")
+    plot_edges(part2_output_dir, indexes,
+               all_edges_tlow, all_edges_tupper, "Edges")
     # plot_nodes(part2_output_dir, indexes, all_edges_tupper, "Edges Tj+")
 
     logging.debug("end part2")
