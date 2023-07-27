@@ -119,12 +119,63 @@ def distance_dict_to_ndarray(nodes_len: int, id_to_index_dict: dict[int64, int64
 
 def calculate_sdg_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[int64, int64]) -> NDArray[float64]:
     dgeodesic = nx.shortest_path_length(graph)
-    dgeodesic.to_numpy_array()
     dgeodesic_dict: dict[int64, dict[int64, int64]] = dict(dgeodesic)
     dgeodesic_array = distance_dict_to_ndarray(
         nodes_len, id_to_index_dict, dgeodesic_dict)
     sdg_array: NDArray[float64] = np.negative(dgeodesic_array)
     return sdg_array
+
+
+def calculate_scn_array(graph: nx.Graph, nodes: NDArray[int64]) -> NDArray[float64]:
+    nodes_len: int = len(nodes)
+    scn_array: NDArray[float64] = np.zeros(
+        shape=(nodes_len, nodes_len), dtype=float64)
+    for i, source in enumerate(nodes):
+        for j, target in enumerate(nodes):
+            common_neighbors_len = len(list(
+                nx.common_neighbors(graph, source, target)))
+            scn_array[i, j] = common_neighbors_len
+
+    return scn_array
+
+
+def calculate_sjc_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[int64, int64]) -> NDArray[float64]:
+    sjc_array: NDArray[float64] = np.zeros(
+        shape=(nodes_len, nodes_len), dtype=float64)
+    jaccard_coefficient = nx.jaccard_coefficient(graph)
+    for u, v, p in jaccard_coefficient:
+        i = id_to_index_dict[u]
+        j = id_to_index_dict[v]
+        sjc_array[i, j] = p
+        sjc_array[j, i] = p
+
+    return sjc_array
+
+
+def calculate_sa_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[int64, int64]) -> NDArray[float64]:
+    sa_array: NDArray[float64] = np.zeros(
+        shape=(nodes_len, nodes_len), dtype=float64)
+    adamic_adar_index = nx.adamic_adar_index(graph)
+    for u, v, p in adamic_adar_index:
+        i = id_to_index_dict[u]
+        j = id_to_index_dict[v]
+        sa_array[i, j] = p
+        sa_array[j, i] = p
+
+    return sa_array
+
+
+def calculate_spa_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[int64, int64]) -> NDArray[float64]:
+    spa_array: NDArray[float64] = np.zeros(
+        shape=(nodes_len, nodes_len), dtype=float64)
+    adamic_adar_index = nx.preferential_attachment(graph)
+    for u, v, p in adamic_adar_index:
+        i = id_to_index_dict[u]
+        j = id_to_index_dict[v]
+        spa_array[i, j] = p
+        spa_array[j, i] = p
+
+    return spa_array
 
 
 def networks_calculations(graph_tlow: nx.Graph, graph_tupper: nx.Graph):
@@ -137,35 +188,56 @@ def networks_calculations(graph_tlow: nx.Graph, graph_tupper: nx.Graph):
         graph_tlow, nodelist=sorted(graph_tlow.nodes()))
     sdg_array_tlow = calculate_sdg_array(
         graph_tlow, nodes_len, id_to_index_dict)
-
-    # TODO
-    # b) Scn
-    # c) Sjc
-    # d) Sa
-    # e) Spa
-
+    scn_array_tlow = calculate_scn_array(graph_tlow, nodes)
+    sjc_array_tlow = calculate_sjc_array(
+        graph_tlow, nodes_len, id_to_index_dict)
+    sa_array_tlow = calculate_sa_array(graph_tlow, nodes_len, id_to_index_dict)
+    spa_array_tlow = calculate_spa_array(
+        graph_tlow, nodes_len, id_to_index_dict)
     # tupper
     adjacency_matrix_tupper = nx.to_numpy_array(
         graph_tupper, nodelist=sorted(graph_tupper.nodes()))
     sdg_array_tupper = calculate_sdg_array(
         graph_tupper, nodes_len, id_to_index_dict)
+    scn_array_tupper = calculate_scn_array(graph_tupper, nodes)
+    sjc_array_tupper = calculate_sjc_array(
+        graph_tupper, nodes_len, id_to_index_dict)
+    sa_array_tupper = calculate_sa_array(
+        graph_tupper, nodes_len, id_to_index_dict)
+    spa_array_tupper = calculate_spa_array(
+        graph_tupper, nodes_len, id_to_index_dict)
 
-    print(adjacency_matrix_tlow[20])
-    print(adjacency_matrix_tupper)
+    if constants.ENABLE_PART2_VALIDATIONS:
+        # assertions for logic consistency
+        assert (adjacency_matrix_tlow == adjacency_matrix_tlow.T).all(
+        ), "part2->networks_calculations: adjacency_matrix_tlow should be symetrical"
+        assert (adjacency_matrix_tupper == adjacency_matrix_tupper.T).all(
+        ), "part2->networks_calculations: adjacency_matrix_tupper should be symetrical"
 
-    print(sdg_array_tlow)
-    print(sdg_array_tupper)
+        assert (sdg_array_tlow == sdg_array_tlow.T).all(
+        ), "part2->networks_calculations: sdg_array_tlow should be symetrical"
+        assert (sdg_array_tupper == sdg_array_tupper.T).all(
+        ), "part2->networks_calculations: sdg_array_tupper should be symetrical"
 
-    # assertions for logic consistency
-    assert (adjacency_matrix_tlow == adjacency_matrix_tlow.T).all(
-    ), "part2->networks_calculations: adjacency_matrix_tlow should be symetrical"
-    assert (adjacency_matrix_tupper == adjacency_matrix_tupper.T).all(
-    ), "part2->networks_calculations: adjacency_matrix_tupper should be symetrical"
+        assert (scn_array_tlow == scn_array_tlow.T).all(
+        ), "part2->networks_calculations: scn_array_tlow should be symetrical"
+        assert (scn_array_tupper == scn_array_tupper.T).all(
+        ), "part2->networks_calculations: scn_array_tupper should be symetrical"
 
-    assert (sdg_array_tlow == sdg_array_tlow.T).all(
-    ), "part2->networks_calculations: sdg_array_tlow should be symetrical"
-    assert (sdg_array_tupper == sdg_array_tupper.T).all(
-    ), "part2->networks_calculations: sdg_array_tupper should be symetrical"
+        assert (sjc_array_tlow == sjc_array_tlow.T).all(
+        ), "part2->networks_calculations: sjc_array_tlow should be symetrical"
+        assert (sjc_array_tupper == sjc_array_tupper.T).all(
+        ), "part2->networks_calculations: sjc_array_tupper should be symetrical"
+
+        assert (sa_array_tlow == sa_array_tlow.T).all(
+        ), "part2->networks_calculations: sa_array_tlow should be symetrical"
+        assert (sa_array_tupper == sa_array_tupper.T).all(
+        ), "part2->networks_calculations: sa_array_tupper should be symetrical"
+
+        assert (spa_array_tlow == spa_array_tlow.T).all(
+        ), "part2->networks_calculations: spa_array_tlow should be symetrical"
+        assert (spa_array_tupper == spa_array_tupper.T).all(
+        ), "part2->networks_calculations: spa_array_tupper should be symetrical"
 
 
 def run_part2(run_part2_input: RunPart2Input):
