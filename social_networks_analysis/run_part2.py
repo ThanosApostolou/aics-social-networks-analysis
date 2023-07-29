@@ -29,6 +29,45 @@ class RunPart2Input:
         return f"sx_df: {self.sx_df}\nt_min: {self.t_min}\nt_max: {self.t_max}\nDT={self.DT}\ndt={self.dt}"
 
 
+class NetworksCalculationsOutput:
+    def __init__(self, adjacency_matrix_tlow: NDArray[float64], sdg_array_tlow: NDArray[float64], scn_array_tlow: NDArray[float64], sjc_array_tlow: NDArray[float64], sa_array_tlow: NDArray[float64], spa_array_tlow: NDArray[float64],
+                 adjacency_matrix_tupper: NDArray[float64], sdg_array_tupper: NDArray[float64], scn_array_tupper: NDArray[float64], sjc_array_tupper: NDArray[float64], sa_array_tupper: NDArray[float64], spa_array_tupper: NDArray[float64]):
+        self.adjacency_matrix_tlow = adjacency_matrix_tlow
+        self.sdg_array_tlow = sdg_array_tlow
+        self.scn_array_tlow = scn_array_tlow
+        self.sjc_array_tlow = sjc_array_tlow
+        self.sa_array_tlow = sa_array_tlow
+        self.spa_array_tlow = spa_array_tlow
+        self.adjacency_matrix_tupper = adjacency_matrix_tupper
+        self.sdg_array_tupper = sdg_array_tupper
+        self.scn_array_tupper = scn_array_tupper
+        self.sjc_array_tupper = sjc_array_tupper
+        self.sa_array_tupper = sa_array_tupper
+        self.spa_array_tupper = spa_array_tupper
+
+
+class RunPart2Output:
+    def __init__(self, adjacency_matrix_tlow: NDArray[float64], sdg_array_tlow: NDArray[float64], scn_array_tlow: NDArray[float64], sjc_array_tlow: NDArray[float64], sa_array_tlow: NDArray[float64], spa_array_tlow: NDArray[float64],
+                 adjacency_matrix_tupper: NDArray[float64], sdg_array_tupper: NDArray[float64], scn_array_tupper: NDArray[float64], sjc_array_tupper: NDArray[float64], sa_array_tupper: NDArray[float64], spa_array_tupper: NDArray[float64]):
+        self.adjacency_matrix_tlow = adjacency_matrix_tlow
+        self.sdg_array_tlow = sdg_array_tlow
+        self.scn_array_tlow = scn_array_tlow
+        self.sjc_array_tlow = sjc_array_tlow
+        self.sa_array_tlow = sa_array_tlow
+        self.spa_array_tlow = spa_array_tlow
+        self.adjacency_matrix_tupper = adjacency_matrix_tupper
+        self.sdg_array_tupper = sdg_array_tupper
+        self.scn_array_tupper = scn_array_tupper
+        self.sjc_array_tupper = sjc_array_tupper
+        self.sa_array_tupper = sa_array_tupper
+        self.spa_array_tupper = spa_array_tupper
+
+    @classmethod
+    def fromNetworksCalculationsOutput(cls, nco: NetworksCalculationsOutput | None) -> 'RunPart2Output':
+        assert nco is not None
+        return RunPart2Output(nco.adjacency_matrix_tlow, nco.sdg_array_tlow, nco.scn_array_tlow, nco.sjc_array_tlow, nco.sa_array_tlow, nco.spa_array_tlow, nco.adjacency_matrix_tupper, nco.sdg_array_tupper, nco.scn_array_tupper, nco.sjc_array_tupper, nco.sa_array_tupper, nco.spa_array_tupper)
+
+
 def create_networks(t_low: int64, t_mid: int64, t_upper: int64, sx_df: DataFrame, index: int) -> tuple[nx.Graph, nx.Graph]:
     logging.debug(
         f"creating Graph{index} [t_low,t_mid]=[{t_low}-{t_mid}] and Graph{index+1} [t_mid,t_upper]=[{t_mid},{t_upper}]")
@@ -106,6 +145,7 @@ def get_id_index_dicts(nodes: NDArray[int64]) -> tuple[dict[int64, int64], dict[
 
 
 def distance_dict_to_ndarray(nodes_len: int, id_to_index_dict: dict[int64, int64], distance_dict: dict[int64, dict[int64, int64]]) -> NDArray[float64]:
+    logging.debug("start distance_dict_to_ndarray")
     distance_array: NDArray[float64] = np.zeros(
         shape=(nodes_len, nodes_len), dtype=float64)
     for source, target_dict in distance_dict.items():
@@ -118,6 +158,7 @@ def distance_dict_to_ndarray(nodes_len: int, id_to_index_dict: dict[int64, int64
 
 
 def calculate_sdg_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[int64, int64]) -> NDArray[float64]:
+    logging.debug("start calculate_sdg_array")
     dgeodesic = nx.shortest_path_length(graph)
     dgeodesic_dict: dict[int64, dict[int64, int64]] = dict(dgeodesic)
     dgeodesic_array = distance_dict_to_ndarray(
@@ -126,20 +167,35 @@ def calculate_sdg_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[
     return sdg_array
 
 
-def calculate_scn_array(graph: nx.Graph, nodes: NDArray[int64]) -> NDArray[float64]:
-    nodes_len: int = len(nodes)
-    scn_array: NDArray[float64] = np.zeros(
-        shape=(nodes_len, nodes_len), dtype=float64)
-    for i, source in enumerate(nodes):
-        for j, target in enumerate(nodes):
-            common_neighbors_len = len(list(
-                nx.common_neighbors(graph, source, target)))
-            scn_array[i, j] = common_neighbors_len
+# def calculate_scn_array(graph: nx.Graph, nodes: NDArray[int64]) -> NDArray[float64]:
+#     logging.debug("start calculate_scn_array")
+#     nodes_len: int = len(nodes)
+#     scn_array: NDArray[float64] = np.zeros(
+#         shape=(nodes_len, nodes_len), dtype=float64)
+#     for i, source in enumerate(nodes):
+#         for j, target in enumerate(nodes):
+#             common_neighbors_len = len(list(
+#                 nx.common_neighbors(graph, source, target)))
+#             scn_array[i, j] = common_neighbors_len
 
-    return scn_array
+#     return scn_array
+
+def calculate_scn_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[int64, int64]) -> NDArray[float64]:
+    logging.debug("start calculate_sjc_array")
+    sjc_array: NDArray[float64] = np.zeros(
+        shape=(nodes_len, nodes_len), dtype=float64)
+    common_neighbor_centrality = nx.common_neighbor_centrality(graph, alpha=1)
+    for u, v, p in common_neighbor_centrality:
+        i = id_to_index_dict[u]
+        j = id_to_index_dict[v]
+        sjc_array[i, j] = p
+        sjc_array[j, i] = p
+
+    return sjc_array
 
 
 def calculate_sjc_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[int64, int64]) -> NDArray[float64]:
+    logging.debug("start calculate_sjc_array")
     sjc_array: NDArray[float64] = np.zeros(
         shape=(nodes_len, nodes_len), dtype=float64)
     jaccard_coefficient = nx.jaccard_coefficient(graph)
@@ -153,6 +209,7 @@ def calculate_sjc_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[
 
 
 def calculate_sa_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[int64, int64]) -> NDArray[float64]:
+    logging.debug("start calculate_sa_array")
     sa_array: NDArray[float64] = np.zeros(
         shape=(nodes_len, nodes_len), dtype=float64)
     adamic_adar_index = nx.adamic_adar_index(graph)
@@ -166,6 +223,7 @@ def calculate_sa_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[i
 
 
 def calculate_spa_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[int64, int64]) -> NDArray[float64]:
+    logging.debug("start calculate_spa_array")
     spa_array: NDArray[float64] = np.zeros(
         shape=(nodes_len, nodes_len), dtype=float64)
     adamic_adar_index = nx.preferential_attachment(graph)
@@ -178,28 +236,31 @@ def calculate_spa_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[
     return spa_array
 
 
-def networks_calculations(graph_tlow: nx.Graph, graph_tupper: nx.Graph):
+def networks_calculations(graph_tlow: nx.Graph, graph_tupper: nx.Graph) -> NetworksCalculationsOutput:
+    logging.debug("start part2 networks_calculations")
     nodes: NDArray[int64] = np.array(graph_tlow.nodes)
     nodes.sort()
     nodes_len: int = len(nodes)
     index_to_id_dict, id_to_index_dict = get_id_index_dicts(nodes)
     # tlow
-    adjacency_matrix_tlow = nx.to_numpy_array(
+    adjacency_matrix_tlow: NDArray[float64] = nx.to_numpy_array(
         graph_tlow, nodelist=sorted(graph_tlow.nodes()))
     sdg_array_tlow = calculate_sdg_array(
         graph_tlow, nodes_len, id_to_index_dict)
-    scn_array_tlow = calculate_scn_array(graph_tlow, nodes)
+    scn_array_tlow = calculate_scn_array(
+        graph_tlow, nodes_len, id_to_index_dict)
     sjc_array_tlow = calculate_sjc_array(
         graph_tlow, nodes_len, id_to_index_dict)
     sa_array_tlow = calculate_sa_array(graph_tlow, nodes_len, id_to_index_dict)
     spa_array_tlow = calculate_spa_array(
         graph_tlow, nodes_len, id_to_index_dict)
     # tupper
-    adjacency_matrix_tupper = nx.to_numpy_array(
+    adjacency_matrix_tupper: NDArray[float64] = nx.to_numpy_array(
         graph_tupper, nodelist=sorted(graph_tupper.nodes()))
     sdg_array_tupper = calculate_sdg_array(
         graph_tupper, nodes_len, id_to_index_dict)
-    scn_array_tupper = calculate_scn_array(graph_tupper, nodes)
+    scn_array_tupper = calculate_scn_array(
+        graph_tupper, nodes_len, id_to_index_dict)
     sjc_array_tupper = calculate_sjc_array(
         graph_tupper, nodes_len, id_to_index_dict)
     sa_array_tupper = calculate_sa_array(
@@ -239,8 +300,11 @@ def networks_calculations(graph_tlow: nx.Graph, graph_tupper: nx.Graph):
         assert (spa_array_tupper == spa_array_tupper.T).all(
         ), "part2->networks_calculations: spa_array_tupper should be symetrical"
 
+    logging.debug("end part2 networks_calculations")
+    return NetworksCalculationsOutput(adjacency_matrix_tlow, sdg_array_tlow, scn_array_tlow, sjc_array_tlow, sa_array_tlow, spa_array_tlow, adjacency_matrix_tupper, sdg_array_tupper, scn_array_tupper, sjc_array_tupper, sa_array_tupper, spa_array_tupper)
 
-def run_part2(run_part2_input: RunPart2Input):
+
+def run_part2(run_part2_input: RunPart2Input) -> RunPart2Output:
     logging.debug("start part2")
     part2_output_dir = Path(constants.OUTPUT_DIR).joinpath("part2")
     if not Path.exists(part2_output_dir):
@@ -249,8 +313,11 @@ def run_part2(run_part2_input: RunPart2Input):
     if not Path.exists(part2_cache_dir):
         Path.mkdir(part2_cache_dir, exist_ok=True, parents=True)
 
-    if constants.USE_CACHE_PART2:
-        return
+    cache_file = part2_cache_dir.joinpath("run_part2_output.pkl")
+    run_part2_output: RunPart2Output | None = utils.load_from_cache(
+        cache_file, constants.USE_CACHE_PART2)
+    if run_part2_output is not None:
+        return run_part2_output
 
     time_spans = run_part2_input.time_spans
     print('last-previous', time_spans[-1] - time_spans[-2])
@@ -265,6 +332,10 @@ def run_part2(run_part2_input: RunPart2Input):
     # last index is previous index in part2
     show_part2_indexes[-1] = show_part2_indexes[-1] - 1
     show_part2_indexes_set = set(show_part2_indexes)
+    nc_output: tuple[NDArray[float64], NDArray[float64], NDArray[float64], NDArray[float64], NDArray[float64], NDArray[float64],
+                     NDArray[float64], NDArray[float64], NDArray[float64], NDArray[float64], NDArray[float64], NDArray[float64]]
+
+    networks_calculations_output: NetworksCalculationsOutput | None = None
     for index, t_low in enumerate(time_spans):
         if index < len(time_spans) - 2:
             if index in show_part2_indexes_set:
@@ -277,9 +348,10 @@ def run_part2(run_part2_input: RunPart2Input):
                 all_edges_tlow.append(len(graph_tlow.edges))
                 all_edges_tupper.append(len(graph_tupper.edges))
 
-                # if index == show_part2_indexes[-1]:
-                if index == 0:
-                    networks_calculations(graph_tlow, graph_tupper)
+                if index == show_part2_indexes[-1]:
+                # if index == 0:
+                    networks_calculations_output = networks_calculations(
+                        graph_tlow, graph_tupper)
 
     print('indexes', indexes)
     print('all_nodes', all_nodes)
@@ -290,3 +362,7 @@ def run_part2(run_part2_input: RunPart2Input):
     # plot_nodes(part2_output_dir, indexes, all_edges_tupper, "Edges Tj+")
 
     logging.debug("end part2")
+    run_part2_output = RunPart2Output.fromNetworksCalculationsOutput(
+        networks_calculations_output)
+    utils.dump_to_cache(cache_file, run_part2_output)
+    return run_part2_output

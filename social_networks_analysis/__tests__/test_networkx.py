@@ -19,3 +19,17 @@ def test_networkx1():
     assert (len(graph2.nodes) == 6)
     assert (len(graph2.edges) == 3)
     assert (graph_array == graph2_array).all()
+
+
+def test_networkx_shortest_path_length():
+    print("test_networkx_shortest_path_length")
+    # n * (n-1) / 2 + n
+    graph = nx.Graph()
+    # graph.add_nodes_from([10, 11, 12, 13, 14, 15])
+    graph.add_nodes_from([15, 14, 13, 12, 11, 10, 9])
+    graph.add_edges_from([(10, 11), (14, 15), (11, 10), (11, 12), (12, 15)])
+    graph_array = nx.to_numpy_array(graph, nodelist=sorted(graph.nodes()))
+
+    dgeodesic = nx.shortest_path_length(graph)
+    dgeodesic_list = list(dgeodesic)
+    print('dgeodesic_list', dgeodesic_list)
