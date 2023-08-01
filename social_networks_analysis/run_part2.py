@@ -13,8 +13,6 @@ import math
 from run_intro import RunIntroOutput
 import constants
 
-# TODO
-
 
 class RunPart2Input:
     def __init__(self, sx_df: pd.DataFrame, t_min: int64, t_max: int64, DT: int64, dt: float64, time_spans: list[int64]):
@@ -29,46 +27,13 @@ class RunPart2Input:
         return f"sx_df: {self.sx_df}\nt_min: {self.t_min}\nt_max: {self.t_max}\nDT={self.DT}\ndt={self.dt}"
 
 
-class NetworksCalculationsOutput:
-    def __init__(self, adjacency_matrix_tlow: NDArray[float64], sdg_array_tlow: NDArray[float64], scn_array_tlow: NDArray[float64], sjc_array_tlow: NDArray[float64], sa_array_tlow: NDArray[float64], spa_array_tlow: NDArray[float64],
-                 adjacency_matrix_tupper: NDArray[float64], sdg_array_tupper: NDArray[float64], scn_array_tupper: NDArray[float64], sjc_array_tupper: NDArray[float64], sa_array_tupper: NDArray[float64], spa_array_tupper: NDArray[float64]):
-        self.adjacency_matrix_tlow = adjacency_matrix_tlow
-        self.sdg_array_tlow = sdg_array_tlow
-        self.scn_array_tlow = scn_array_tlow
-        self.sjc_array_tlow = sjc_array_tlow
-        self.sa_array_tlow = sa_array_tlow
-        self.spa_array_tlow = spa_array_tlow
-        self.adjacency_matrix_tupper = adjacency_matrix_tupper
-        self.sdg_array_tupper = sdg_array_tupper
-        self.scn_array_tupper = scn_array_tupper
-        self.sjc_array_tupper = sjc_array_tupper
-        self.sa_array_tupper = sa_array_tupper
-        self.spa_array_tupper = spa_array_tupper
-
-
 class RunPart2Output:
-    def __init__(self, adjacency_matrix_tlow: NDArray[float64], sdg_array_tlow: NDArray[float64], scn_array_tlow: NDArray[float64], sjc_array_tlow: NDArray[float64], sa_array_tlow: NDArray[float64], spa_array_tlow: NDArray[float64],
-                 adjacency_matrix_tupper: NDArray[float64], sdg_array_tupper: NDArray[float64], scn_array_tupper: NDArray[float64], sjc_array_tupper: NDArray[float64], sa_array_tupper: NDArray[float64], spa_array_tupper: NDArray[float64]):
-        self.adjacency_matrix_tlow = adjacency_matrix_tlow
-        self.sdg_array_tlow = sdg_array_tlow
-        self.scn_array_tlow = scn_array_tlow
-        self.sjc_array_tlow = sjc_array_tlow
-        self.sa_array_tlow = sa_array_tlow
-        self.spa_array_tlow = spa_array_tlow
-        self.adjacency_matrix_tupper = adjacency_matrix_tupper
-        self.sdg_array_tupper = sdg_array_tupper
-        self.scn_array_tupper = scn_array_tupper
-        self.sjc_array_tupper = sjc_array_tupper
-        self.sa_array_tupper = sa_array_tupper
-        self.spa_array_tupper = spa_array_tupper
-
-    @classmethod
-    def fromNetworksCalculationsOutput(cls, nco: NetworksCalculationsOutput | None) -> 'RunPart2Output':
-        assert nco is not None
-        return RunPart2Output(nco.adjacency_matrix_tlow, nco.sdg_array_tlow, nco.scn_array_tlow, nco.sjc_array_tlow, nco.sa_array_tlow, nco.spa_array_tlow, nco.adjacency_matrix_tupper, nco.sdg_array_tupper, nco.scn_array_tupper, nco.sjc_array_tupper, nco.sa_array_tupper, nco.spa_array_tupper)
+    def __init__(self, graph_tlow: nx.Graph, graph_tupper: nx.Graph):
+        self.graph_tlow = graph_tlow
+        self.graph_tupper = graph_tupper
 
 
-def create_networks(t_low: int64, t_mid: int64, t_upper: int64, sx_df: DataFrame, index: int) -> tuple[nx.Graph, nx.Graph]:
+def create_networks(t_low: int64, t_mid: int64, t_upper: int64, sx_df: DataFrame, index: int) -> tuple[nx.Graph, nx.Graph, dict[int64, int64], dict[int64, int64]]:
     logging.debug(
         f"creating Graph{index} [t_low,t_mid]=[{t_low}-{t_mid}] and Graph{index+1} [t_mid,t_upper]=[{t_mid},{t_upper}]")
     sx_in_timespan = sx_df[(sx_df[constants.DFCOL_UNIXTS]
@@ -79,20 +44,21 @@ def create_networks(t_low: int64, t_mid: int64, t_upper: int64, sx_df: DataFrame
     sx_in_tupper = sx_in_timespan[(sx_in_timespan[constants.DFCOL_UNIXTS]
                                    >= t_mid) & (sx_in_timespan[constants.DFCOL_UNIXTS] < t_upper)]
 
-    nodes = utils.nodes_from_df(sx_in_timespan)
+    nodes, index_to_id_dict, id_to_index_dict = utils.nodes_from_df(
+        sx_in_timespan)
     # graph tlow
-    edges_tlow = utils.edges_from_df(sx_in_tlow)
+    edges_tlow = utils.edges_from_df(sx_in_tlow, id_to_index_dict)
     graph_tlow = nx.Graph()
     graph_tlow.add_nodes_from(nodes)
     graph_tlow.add_edges_from(edges_tlow)
     # graph_tlow.remove_edges_from(nx.selfloop_edges(graph_tlow))
     # graph tupper
-    edges_tupper = utils.edges_from_df(sx_in_tupper)
+    edges_tupper = utils.edges_from_df(sx_in_tupper, id_to_index_dict)
     graph_upper = nx.Graph()
     graph_upper.add_nodes_from(nodes)
     graph_upper.add_edges_from(edges_tupper)
     # graph_upper.remove_edges_from(nx.selfloop_edges(graph_upper))
-    return graph_tlow, graph_upper
+    return graph_tlow, graph_upper, index_to_id_dict, id_to_index_dict
 
 
 def plot_nodes(plots_dir: Path, indexes: list[int], all_nodes_or_edges: list[int], name: str, block: bool = False):
@@ -133,38 +99,61 @@ def plot_edges(plots_dir: Path, indexes: list[int], all_edges_tlow: list[int], a
     plt.show(block=block)
 
 
-def get_id_index_dicts(nodes: NDArray[int64]) -> tuple[dict[int64, int64], dict[int64, int64]]:
-    nodes.sort()
-    index_to_id_dict: dict[int64, int64] = {}
-    id_to_index_dict: dict[int64, int64] = {}
-    for index, node in enumerate(nodes):
-        index_to_id_dict[int64(index)] = node
-        id_to_index_dict[node] = int64(index)
+def calculate_adjacency_matrix(graph: nx.Graph, nodes_len: int, path: Path):
+    logging.debug("start calculate_adjacency_matrix")
+    adjacency_column_cached: NDArray[float64] | None = utils.load_from_cache(
+        path, constants.USE_CACHE_PART2)
+    if adjacency_column_cached is not None:
+        return
 
-    return index_to_id_dict, id_to_index_dict
+    adjacency_matrix: NDArray[float64] = nx.to_numpy_array(
+        graph, nodelist=sorted(graph.nodes()))
+    if constants.ENABLE_PART2_VALIDATIONS:
+        # assertions for logic consistency
+        assert (adjacency_matrix == adjacency_matrix.T).all(
+        ), "part2->networks_calculations: adjacency_matrix should be symetrical"
+
+    adjacency_column = utils.convert_symetrical_array_to_column(
+        adjacency_matrix, nodes_len)
+    utils.dump_to_cache(path, adjacency_column)
 
 
-def distance_dict_to_ndarray(nodes_len: int, id_to_index_dict: dict[int64, int64], distance_dict: dict[int64, dict[int64, int64]]) -> NDArray[float64]:
+def distance_dict_to_ndarray(nodes_len: int, distance_dict: dict[int64, dict[int64, int64]]) -> NDArray[float64]:
     logging.debug("start distance_dict_to_ndarray")
     distance_array: NDArray[float64] = np.zeros(
         shape=(nodes_len, nodes_len), dtype=float64)
     for source, target_dict in distance_dict.items():
-        source_index = id_to_index_dict[source]
         for target, value in target_dict.items():
-            target_index = id_to_index_dict[target]
-            distance_array[source_index, target_index] = float64(value)
+            distance_array[source, target] = float64(value)
 
     return distance_array
 
 
-def calculate_sdg_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[int64, int64]) -> NDArray[float64]:
-    logging.debug("start calculate_sdg_array")
+def calculate_dgeodesic_array(graph: nx.Graph, nodes_len: int):
+    logging.debug("start calculate_dgeodesic_array")
+
     dgeodesic = nx.shortest_path_length(graph)
-    dgeodesic_dict: dict[int64, dict[int64, int64]] = dict(dgeodesic)
-    dgeodesic_array = distance_dict_to_ndarray(
-        nodes_len, id_to_index_dict, dgeodesic_dict)
-    sdg_array: NDArray[float64] = np.negative(dgeodesic_array)
-    return sdg_array
+    dgeodesic = dict(dgeodesic)
+    dgeodesic = distance_dict_to_ndarray(
+        nodes_len, dgeodesic)
+    return dgeodesic
+
+
+def calculate_sdg_array(graph: nx.Graph, nodes_len: int, path: Path):
+    logging.debug("start calculate_sdg_array")
+    sdg_column_cached: NDArray[float64] | None = utils.load_from_cache(
+        path, constants.USE_CACHE_PART2)
+    if sdg_column_cached is not None:
+        return
+
+    sdg_array: NDArray[float64] = np.negative(
+        calculate_dgeodesic_array(graph, nodes_len))
+    if constants.ENABLE_PART2_VALIDATIONS:
+        # assertions for logic consistency
+        assert (sdg_array == sdg_array.T).all(
+        ), "part2->networks_calculations: sdg_array should be symetrical"
+    sdg_column = utils.convert_symetrical_array_to_column(sdg_array, nodes_len)
+    utils.dump_to_cache(path, sdg_column)
 
 
 # def calculate_scn_array(graph: nx.Graph, nodes: NDArray[int64]) -> NDArray[float64]:
@@ -180,128 +169,151 @@ def calculate_sdg_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[
 
 #     return scn_array
 
-def calculate_scn_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[int64, int64]) -> NDArray[float64]:
-    logging.debug("start calculate_sjc_array")
-    sjc_array: NDArray[float64] = np.zeros(
+# def calculate_sdg_array(graph: nx.Graph, nodes_len: int, path: Path):
+#     logging.debug("start calculate_sdg_array")
+#     sdg_column_cached: NDArray[float64] | None = utils.load_from_cache(
+#         path, constants.USE_CACHE_PART2)
+#     if sdg_column_cached is not None:
+#         return
+
+#     shortest_paths_array: NDArray[float64] = nx.floyd_warshall_numpy(graph)
+#     sdg_array: NDArray[float64] = np.negative(shortest_paths_array)
+#     print('sdg_array[0]', sdg_array[0])
+#     if constants.ENABLE_PART2_VALIDATIONS:
+#         # assertions for logic consistency
+#         assert (sdg_array == sdg_array.T).all(
+#         ), "part2->networks_calculations: sdg_array should be symetrical"
+
+#     sdg_column = utils.convert_symetrical_array_to_column(
+#         sdg_array, nodes_len)
+#     utils.dump_to_cache(path, sdg_column)
+
+
+def calculate_scn_array(graph: nx.Graph, nodes_len: int, path: Path):
+    logging.debug("start calculate_scn_array")
+    scn_column_cached: NDArray[float64] | None = utils.load_from_cache(
+        path, constants.USE_CACHE_PART2)
+    if scn_column_cached is not None:
+        return
+
+    scn_array: NDArray[float64] = np.zeros(
         shape=(nodes_len, nodes_len), dtype=float64)
     common_neighbor_centrality = nx.common_neighbor_centrality(graph, alpha=1)
     for u, v, p in common_neighbor_centrality:
-        i = id_to_index_dict[u]
-        j = id_to_index_dict[v]
-        sjc_array[i, j] = p
-        sjc_array[j, i] = p
+        scn_array[u, v] = p
+        scn_array[v, u] = p
 
-    return sjc_array
+    if constants.ENABLE_PART2_VALIDATIONS:
+        # assertions for logic consistency
+        assert (scn_array == scn_array.T).all(
+        ), "part2->networks_calculations: scn_array should be symetrical"
+
+    scn_column = utils.convert_symetrical_array_to_column(scn_array, nodes_len)
+    utils.dump_to_cache(path, scn_column)
 
 
-def calculate_sjc_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[int64, int64]) -> NDArray[float64]:
+def calculate_sjc_array(graph: nx.Graph, nodes_len: int, path: Path):
     logging.debug("start calculate_sjc_array")
+    sjc_column_cached: NDArray[float64] | None = utils.load_from_cache(
+        path, constants.USE_CACHE_PART2)
+    if sjc_column_cached is not None:
+        return
+
     sjc_array: NDArray[float64] = np.zeros(
         shape=(nodes_len, nodes_len), dtype=float64)
     jaccard_coefficient = nx.jaccard_coefficient(graph)
     for u, v, p in jaccard_coefficient:
-        i = id_to_index_dict[u]
-        j = id_to_index_dict[v]
-        sjc_array[i, j] = p
-        sjc_array[j, i] = p
+        sjc_array[u, v] = p
+        sjc_array[v, u] = p
 
-    return sjc_array
+    if constants.ENABLE_PART2_VALIDATIONS:
+        # assertions for logic consistency
+        assert (sjc_array == sjc_array.T).all(
+        ), "part2->networks_calculations: sjc_array should be symetrical"
+
+    sjc_column = utils.convert_symetrical_array_to_column(sjc_array, nodes_len)
+    utils.dump_to_cache(path, sjc_column)
 
 
-def calculate_sa_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[int64, int64]) -> NDArray[float64]:
+def calculate_sa_array(graph: nx.Graph, nodes_len: int, path: Path):
     logging.debug("start calculate_sa_array")
+    sa_column_cached: NDArray[float64] | None = utils.load_from_cache(
+        path, constants.USE_CACHE_PART2)
+    if sa_column_cached is not None:
+        return
+
     sa_array: NDArray[float64] = np.zeros(
         shape=(nodes_len, nodes_len), dtype=float64)
     adamic_adar_index = nx.adamic_adar_index(graph)
     for u, v, p in adamic_adar_index:
-        i = id_to_index_dict[u]
-        j = id_to_index_dict[v]
-        sa_array[i, j] = p
-        sa_array[j, i] = p
+        sa_array[u, v] = p
+        sa_array[v, u] = p
 
-    return sa_array
+    if constants.ENABLE_PART2_VALIDATIONS:
+        # assertions for logic consistency
+        assert (sa_array == sa_array.T).all(
+        ), "part2->networks_calculations: sa_array should be symetrical"
+
+    sa_column = utils.convert_symetrical_array_to_column(sa_array, nodes_len)
+    utils.dump_to_cache(path, sa_column)
 
 
-def calculate_spa_array(graph: nx.Graph, nodes_len: int, id_to_index_dict: dict[int64, int64]) -> NDArray[float64]:
+def calculate_spa_array(graph: nx.Graph, nodes_len: int, path: Path):
     logging.debug("start calculate_spa_array")
+    spa_column_cached: NDArray[float64] | None = utils.load_from_cache(
+        path, constants.USE_CACHE_PART2)
+    if spa_column_cached is not None:
+        return
+
     spa_array: NDArray[float64] = np.zeros(
         shape=(nodes_len, nodes_len), dtype=float64)
     adamic_adar_index = nx.preferential_attachment(graph)
     for u, v, p in adamic_adar_index:
-        i = id_to_index_dict[u]
-        j = id_to_index_dict[v]
-        spa_array[i, j] = p
-        spa_array[j, i] = p
+        spa_array[u, v] = p
+        spa_array[v, u] = p
 
-    return spa_array
+    if constants.ENABLE_PART2_VALIDATIONS:
+        # assertions for logic consistency
+        assert (spa_array == spa_array.T).all(
+        ), "part2->networks_calculations: spa_array should be symetrical"
+
+    spa_column = utils.convert_symetrical_array_to_column(spa_array, nodes_len)
+    utils.dump_to_cache(path, spa_column)
 
 
-def networks_calculations(graph_tlow: nx.Graph, graph_tupper: nx.Graph) -> NetworksCalculationsOutput:
+def networks_calculations(graph_tlow: nx.Graph, graph_tupper: nx.Graph, id_to_index_dict: dict[int64, int64], part2_cache_dir: Path):
     logging.debug("start part2 networks_calculations")
     nodes: NDArray[int64] = np.array(graph_tlow.nodes)
     nodes.sort()
     nodes_len: int = len(nodes)
-    index_to_id_dict, id_to_index_dict = get_id_index_dicts(nodes)
     # tlow
-    adjacency_matrix_tlow: NDArray[float64] = nx.to_numpy_array(
-        graph_tlow, nodelist=sorted(graph_tlow.nodes()))
-    sdg_array_tlow = calculate_sdg_array(
-        graph_tlow, nodes_len, id_to_index_dict)
-    scn_array_tlow = calculate_scn_array(
-        graph_tlow, nodes_len, id_to_index_dict)
-    sjc_array_tlow = calculate_sjc_array(
-        graph_tlow, nodes_len, id_to_index_dict)
-    sa_array_tlow = calculate_sa_array(graph_tlow, nodes_len, id_to_index_dict)
-    spa_array_tlow = calculate_spa_array(
-        graph_tlow, nodes_len, id_to_index_dict)
+    calculate_adjacency_matrix(
+        graph_tlow, nodes_len, part2_cache_dir.joinpath("adjacency_column_tlow"))
+    calculate_sdg_array(graph_tlow, nodes_len,
+                        part2_cache_dir.joinpath("sdg_column_tlow"))
+    calculate_scn_array(
+        graph_tlow, nodes_len, part2_cache_dir.joinpath("scn_column_tlow"))
+    calculate_sjc_array(
+        graph_tlow, nodes_len, part2_cache_dir.joinpath("sjc_column_tlow"))
+    calculate_sa_array(graph_tlow, nodes_len,
+                       part2_cache_dir.joinpath("sa_column_tlow"))
+    calculate_spa_array(
+        graph_tlow, nodes_len, part2_cache_dir.joinpath("spa_column_tlow"))
     # tupper
-    adjacency_matrix_tupper: NDArray[float64] = nx.to_numpy_array(
-        graph_tupper, nodelist=sorted(graph_tupper.nodes()))
-    sdg_array_tupper = calculate_sdg_array(
-        graph_tupper, nodes_len, id_to_index_dict)
-    scn_array_tupper = calculate_scn_array(
-        graph_tupper, nodes_len, id_to_index_dict)
-    sjc_array_tupper = calculate_sjc_array(
-        graph_tupper, nodes_len, id_to_index_dict)
-    sa_array_tupper = calculate_sa_array(
-        graph_tupper, nodes_len, id_to_index_dict)
-    spa_array_tupper = calculate_spa_array(
-        graph_tupper, nodes_len, id_to_index_dict)
-
-    if constants.ENABLE_PART2_VALIDATIONS:
-        # assertions for logic consistency
-        assert (adjacency_matrix_tlow == adjacency_matrix_tlow.T).all(
-        ), "part2->networks_calculations: adjacency_matrix_tlow should be symetrical"
-        assert (adjacency_matrix_tupper == adjacency_matrix_tupper.T).all(
-        ), "part2->networks_calculations: adjacency_matrix_tupper should be symetrical"
-
-        assert (sdg_array_tlow == sdg_array_tlow.T).all(
-        ), "part2->networks_calculations: sdg_array_tlow should be symetrical"
-        assert (sdg_array_tupper == sdg_array_tupper.T).all(
-        ), "part2->networks_calculations: sdg_array_tupper should be symetrical"
-
-        assert (scn_array_tlow == scn_array_tlow.T).all(
-        ), "part2->networks_calculations: scn_array_tlow should be symetrical"
-        assert (scn_array_tupper == scn_array_tupper.T).all(
-        ), "part2->networks_calculations: scn_array_tupper should be symetrical"
-
-        assert (sjc_array_tlow == sjc_array_tlow.T).all(
-        ), "part2->networks_calculations: sjc_array_tlow should be symetrical"
-        assert (sjc_array_tupper == sjc_array_tupper.T).all(
-        ), "part2->networks_calculations: sjc_array_tupper should be symetrical"
-
-        assert (sa_array_tlow == sa_array_tlow.T).all(
-        ), "part2->networks_calculations: sa_array_tlow should be symetrical"
-        assert (sa_array_tupper == sa_array_tupper.T).all(
-        ), "part2->networks_calculations: sa_array_tupper should be symetrical"
-
-        assert (spa_array_tlow == spa_array_tlow.T).all(
-        ), "part2->networks_calculations: spa_array_tlow should be symetrical"
-        assert (spa_array_tupper == spa_array_tupper.T).all(
-        ), "part2->networks_calculations: spa_array_tupper should be symetrical"
+    calculate_adjacency_matrix(
+        graph_tupper, nodes_len, part2_cache_dir.joinpath("adjacency_column_tupper"))
+    calculate_sdg_array(graph_tupper, nodes_len,
+                        part2_cache_dir.joinpath("sdg_column_tupper"))
+    calculate_scn_array(
+        graph_tupper, nodes_len, part2_cache_dir.joinpath("scn_column_tuper"))
+    calculate_sjc_array(
+        graph_tupper, nodes_len, part2_cache_dir.joinpath("sjc_column_tupper"))
+    calculate_sa_array(
+        graph_tupper, nodes_len, part2_cache_dir.joinpath("sa_column_tupper"))
+    calculate_spa_array(
+        graph_tupper, nodes_len, part2_cache_dir.joinpath("spa_column_tupper"))
 
     logging.debug("end part2 networks_calculations")
-    return NetworksCalculationsOutput(adjacency_matrix_tlow, sdg_array_tlow, scn_array_tlow, sjc_array_tlow, sa_array_tlow, spa_array_tlow, adjacency_matrix_tupper, sdg_array_tupper, scn_array_tupper, sjc_array_tupper, sa_array_tupper, spa_array_tupper)
 
 
 def run_part2(run_part2_input: RunPart2Input) -> RunPart2Output:
@@ -335,23 +347,24 @@ def run_part2(run_part2_input: RunPart2Input) -> RunPart2Output:
     nc_output: tuple[NDArray[float64], NDArray[float64], NDArray[float64], NDArray[float64], NDArray[float64], NDArray[float64],
                      NDArray[float64], NDArray[float64], NDArray[float64], NDArray[float64], NDArray[float64], NDArray[float64]]
 
-    networks_calculations_output: NetworksCalculationsOutput | None = None
+    graph_tlow: nx.Graph | None = None
+    graph_tupper: nx.Graph | None = None
     for index, t_low in enumerate(time_spans):
         if index < len(time_spans) - 2:
             if index in show_part2_indexes_set:
                 t_mid = time_spans[index+1]
                 t_upper = time_spans[index+2]
-                graph_tlow, graph_tupper = create_networks(t_low, t_mid, t_upper, run_part2_input.sx_df,
-                                                           index)
+                graph_tlow, graph_tupper, _, id_to_index_dict = create_networks(t_low, t_mid, t_upper, run_part2_input.sx_df,
+                                                                                index)
                 indexes.append(index)
                 all_nodes.append(len(graph_tlow.nodes))
                 all_edges_tlow.append(len(graph_tlow.edges))
                 all_edges_tupper.append(len(graph_tupper.edges))
 
                 if index == show_part2_indexes[-1]:
-                # if index == 0:
+                    # if index == 0:
                     networks_calculations_output = networks_calculations(
-                        graph_tlow, graph_tupper)
+                        graph_tlow, graph_tupper, id_to_index_dict, part2_cache_dir)
 
     print('indexes', indexes)
     print('all_nodes', all_nodes)
@@ -362,7 +375,7 @@ def run_part2(run_part2_input: RunPart2Input) -> RunPart2Output:
     # plot_nodes(part2_output_dir, indexes, all_edges_tupper, "Edges Tj+")
 
     logging.debug("end part2")
-    run_part2_output = RunPart2Output.fromNetworksCalculationsOutput(
-        networks_calculations_output)
+    assert graph_tlow is not None and graph_tupper is not None
+    run_part2_output = RunPart2Output(graph_tlow, graph_tupper)
     utils.dump_to_cache(cache_file, run_part2_output)
     return run_part2_output

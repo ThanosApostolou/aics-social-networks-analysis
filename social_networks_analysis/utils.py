@@ -63,22 +63,39 @@ def plot_graph_largest_components(G: nx.classes.Graph, max_largest_components: i
     plt.show(block=block)
 
 
-def nodes_from_df(sx_df: DataFrame) -> NDArray[int64]:
+def get_id_index_dicts(nodes: NDArray[int64]) -> tuple[dict[int64, int64], dict[int64, int64]]:
+    nodes.sort()
+    index_to_id_dict: dict[int64, int64] = {}
+    id_to_index_dict: dict[int64, int64] = {}
+    for index, node in enumerate(nodes):
+        index_to_id_dict[int64(index)] = node
+        id_to_index_dict[node] = int64(index)
+
+    return index_to_id_dict, id_to_index_dict
+
+
+def nodes_from_df(sx_df: DataFrame) -> tuple[NDArray[int64], dict[int64, int64], dict[int64, int64]]:
     srcs: NDArray[int64] = sx_df[constants.DFCOL_SRC].unique()
     dsts: NDArray[int64] = sx_df[constants.DFCOL_DST].unique()
 
-    users = np.sort(np.unique(np.concatenate((srcs, dsts), axis=0)))
-    return users
+    nodes_ids = np.sort(np.unique(np.concatenate((srcs, dsts), axis=0)))
+    index_to_id_dict, id_to_index_dict = get_id_index_dicts(nodes_ids)
+    nodes = np.array(range(0, len(nodes_ids), 1))
+    return nodes, index_to_id_dict, id_to_index_dict
 
 
-def edges_from_df(sx_df: DataFrame) -> list[tuple[int64, int64]]:
+def edges_from_df(sx_df: DataFrame, id_to_index_dict: dict[int64, int64]) -> list[tuple[int64, int64]]:
     # test = list(set([(int64(1), int64(2)), (2, 3)]))
     # logging.debug(test)
     # edges = list(set(list(
     #     sx_df[[constants.DFCOL_SRC, constants.DFCOL_DST]].to_records(index=False))))
     edges_set: set[tuple[int64, int64]] = set()
     for _, row in sx_df.iterrows():
-        edges_set.add((row[constants.DFCOL_SRC], row[constants.DFCOL_DST]))
+        source_id = row[constants.DFCOL_SRC]
+        target_id = row[constants.DFCOL_DST]
+        source = id_to_index_dict[source_id]
+        target = id_to_index_dict[target_id]
+        edges_set.add((source, target))
     edges = list(edges_set)
     # logging.debug(edges)
     return edges
@@ -103,3 +120,19 @@ def parts_indexes_from_list(mylist: list, n_indexes: int) -> list[int]:
         indexes.append(len(mylist) - 1)
 
     return indexes
+
+
+def convert_symetrical_array_to_column(array: NDArray, length: int) -> NDArray:
+    logging.debug("start convert_symetrical_array_to_column")
+    column_len = length * (length - 1) // 2 + length
+    column: NDArray = np.zeros(column_len)
+    counter = 0
+    for i in range(0, length, 1):
+        for j in range(i, length, 1):
+            column[counter] = array[i, j]
+            counter += 1
+
+    # combination n choose 2 plust diagonal
+    assert len(column) == column_len == counter
+
+    return column

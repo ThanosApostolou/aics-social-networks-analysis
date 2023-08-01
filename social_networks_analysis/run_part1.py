@@ -59,8 +59,9 @@ def create_network(t_low: int64, t_upper: int64, sx_df: DataFrame, index: int) -
     sx_in_timespan = sx_df[(sx_df[constants.DFCOL_UNIXTS]
                             >= t_low) & (sx_df[constants.DFCOL_UNIXTS] < t_upper)]
 
-    nodes = utils.nodes_from_df(sx_in_timespan)
-    edges = utils.edges_from_df(sx_in_timespan)
+    nodes, _, id_to_index_dict = utils.nodes_from_df(
+        sx_in_timespan)
+    edges = utils.edges_from_df(sx_in_timespan, id_to_index_dict)
     graph = nx.Graph()
     graph.add_nodes_from(nodes)
     graph.add_edges_from(edges)
