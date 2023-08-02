@@ -9,7 +9,7 @@ from numpy import int64
 from numpy.typing import NDArray
 import logging
 from typing import Any
-import constants
+from social_networks_analysis import constants
 
 
 def load_from_cache(cache_file_path: Path, use_cache: bool) -> Any | None:
@@ -124,15 +124,17 @@ def parts_indexes_from_list(mylist: list, n_indexes: int) -> list[int]:
 
 def convert_symetrical_array_to_column(array: NDArray, length: int) -> NDArray:
     logging.debug("start convert_symetrical_array_to_column")
-    column_len = length * (length - 1) // 2 + length
-    column: NDArray = np.zeros(column_len)
-    counter = 0
-    for i in range(0, length, 1):
-        for j in range(i, length, 1):
-            column[counter] = array[i, j]
-            counter += 1
+    # column_len = length * (length - 1) // 2 + length
+    # column: NDArray = np.zeros(column_len)
+    # counter = 0
+    # for i in range(0, length, 1):
+    #     for j in range(i, length, 1):
+    #         column[counter] = array[i, j]
+    #         counter += 1
+    # # combination n choose 2 plust diagonal
+    # assert len(column) == column_len == counter
 
-    # combination n choose 2 plust diagonal
-    assert len(column) == column_len == counter
+    column = array[np.triu_indices(length)]
+    assert len(column) == length * (length - 1) // 2 + length
 
     return column

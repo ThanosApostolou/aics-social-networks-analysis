@@ -54,11 +54,13 @@ def create_networks(t_low: int64, t_mid: int64, t_upper: int64, sx_df: DataFrame
     # graph_tlow.remove_edges_from(nx.selfloop_edges(graph_tlow))
     # graph tupper
     edges_tupper = utils.edges_from_df(sx_in_tupper, id_to_index_dict)
-    graph_upper = nx.Graph()
-    graph_upper.add_nodes_from(nodes)
-    graph_upper.add_edges_from(edges_tupper)
+    graph_tupper = nx.Graph()
+    graph_tupper.add_nodes_from(nodes)
+    graph_tupper.add_edges_from(edges_tupper)
     # graph_upper.remove_edges_from(nx.selfloop_edges(graph_upper))
-    return graph_tlow, graph_upper, index_to_id_dict, id_to_index_dict
+    assert np.array_equal(nodes, np.array(graph_tlow.nodes))
+    assert np.array_equal(nodes, np.array(graph_tupper.nodes))
+    return graph_tlow, graph_tupper, index_to_id_dict, id_to_index_dict
 
 
 def plot_nodes(plots_dir: Path, indexes: list[int], all_nodes_or_edges: list[int], name: str, block: bool = False):
@@ -102,7 +104,7 @@ def plot_edges(plots_dir: Path, indexes: list[int], all_edges_tlow: list[int], a
 def calculate_adjacency_matrix(graph: nx.Graph, nodes_len: int, path: Path):
     logging.debug("start calculate_adjacency_matrix")
     adjacency_column_cached: NDArray[float64] | None = utils.load_from_cache(
-        path, constants.USE_CACHE_PART2)
+        path, constants.USE_CACHE_PART2_DATA)
     if adjacency_column_cached is not None:
         return
 
@@ -142,7 +144,7 @@ def calculate_dgeodesic_array(graph: nx.Graph, nodes_len: int):
 def calculate_sdg_array(graph: nx.Graph, nodes_len: int, path: Path):
     logging.debug("start calculate_sdg_array")
     sdg_column_cached: NDArray[float64] | None = utils.load_from_cache(
-        path, constants.USE_CACHE_PART2)
+        path, constants.USE_CACHE_PART2_DATA)
     if sdg_column_cached is not None:
         return
 
@@ -155,19 +157,6 @@ def calculate_sdg_array(graph: nx.Graph, nodes_len: int, path: Path):
     sdg_column = utils.convert_symetrical_array_to_column(sdg_array, nodes_len)
     utils.dump_to_cache(path, sdg_column)
 
-
-# def calculate_scn_array(graph: nx.Graph, nodes: NDArray[int64]) -> NDArray[float64]:
-#     logging.debug("start calculate_scn_array")
-#     nodes_len: int = len(nodes)
-#     scn_array: NDArray[float64] = np.zeros(
-#         shape=(nodes_len, nodes_len), dtype=float64)
-#     for i, source in enumerate(nodes):
-#         for j, target in enumerate(nodes):
-#             common_neighbors_len = len(list(
-#                 nx.common_neighbors(graph, source, target)))
-#             scn_array[i, j] = common_neighbors_len
-
-#     return scn_array
 
 # def calculate_sdg_array(graph: nx.Graph, nodes_len: int, path: Path):
 #     logging.debug("start calculate_sdg_array")
@@ -189,33 +178,64 @@ def calculate_sdg_array(graph: nx.Graph, nodes_len: int, path: Path):
 #     utils.dump_to_cache(path, sdg_column)
 
 
-def calculate_scn_array(graph: nx.Graph, nodes_len: int, path: Path):
+def calculate_scn_array(graph: nx.Graph, nodes: NDArray[int64], nodes_len: int, path: Path):
     logging.debug("start calculate_scn_array")
     scn_column_cached: NDArray[float64] | None = utils.load_from_cache(
-        path, constants.USE_CACHE_PART2)
+        path, constants.USE_CACHE_PART2_DATA)
     if scn_column_cached is not None:
         return
 
-    scn_array: NDArray[float64] = np.zeros(
-        shape=(nodes_len, nodes_len), dtype=float64)
-    common_neighbor_centrality = nx.common_neighbor_centrality(graph, alpha=1)
-    for u, v, p in common_neighbor_centrality:
-        scn_array[u, v] = p
-        scn_array[v, u] = p
+    # scn_array: NDArray[float64] = np.zeros(
+    #     shape=(nodes_len, nodes_len), dtype=float64)
+    # for i, source in enumerate(nodes):
+    #     for j, target in enumerate(nodes):
+    #         common_neighbors_len = len(list(
+    #             nx.common_neighbors(graph, source, target)))
+    #         scn_array[i, j] = common_neighbors_len
 
-    if constants.ENABLE_PART2_VALIDATIONS:
-        # assertions for logic consistency
-        assert (scn_array == scn_array.T).all(
-        ), "part2->networks_calculations: scn_array should be symetrical"
+    scn_column_len = nodes_len * (nodes_len - 1) // 2 + nodes_len
+    scn_column: NDArray = np.zeros(scn_column_len)
+    counter = 0
+    for i in range(0, nodes_len, 1):
+        for j in range(i, nodes_len, 1):
+            common_neighbors_len = len(list(
+                nx.common_neighbors(graph, i, j)))
+            scn_column[counter] = common_neighbors_len
+            counter += 1
+    # combination n choose 2 plust diagonal
+    assert len(scn_column) == scn_column_len == counter
 
-    scn_column = utils.convert_symetrical_array_to_column(scn_array, nodes_len)
+    # scn_column = utils.convert_symetrical_array_to_column(scn_array, nodes_len)
     utils.dump_to_cache(path, scn_column)
+
+
+# def calculate_scn_array(graph: nx.Graph, nodes_len: int, path: Path):
+#     logging.debug("start calculate_scn_array")
+#     scn_column_cached: NDArray[float64] | None = utils.load_from_cache(
+#         path, constants.USE_CACHE_PART2_DATA)
+#     if scn_column_cached is not None:
+#         return
+
+#     scn_array: NDArray[float64] = np.zeros(
+#         shape=(nodes_len, nodes_len), dtype=float64)
+#     common_neighbor_centrality = nx.common_neighbor_centrality(graph, alpha=1)
+#     for u, v, p in common_neighbor_centrality:
+#         scn_array[u, v] = p
+#         scn_array[v, u] = p
+
+#     if constants.ENABLE_PART2_VALIDATIONS:
+#         # assertions for logic consistency
+#         assert (scn_array == scn_array.T).all(
+#         ), "part2->networks_calculations: scn_array should be symetrical"
+
+#     scn_column = utils.convert_symetrical_array_to_column(scn_array, nodes_len)
+#     utils.dump_to_cache(path, scn_column)
 
 
 def calculate_sjc_array(graph: nx.Graph, nodes_len: int, path: Path):
     logging.debug("start calculate_sjc_array")
     sjc_column_cached: NDArray[float64] | None = utils.load_from_cache(
-        path, constants.USE_CACHE_PART2)
+        path, constants.USE_CACHE_PART2_DATA)
     if sjc_column_cached is not None:
         return
 
@@ -238,7 +258,7 @@ def calculate_sjc_array(graph: nx.Graph, nodes_len: int, path: Path):
 def calculate_sa_array(graph: nx.Graph, nodes_len: int, path: Path):
     logging.debug("start calculate_sa_array")
     sa_column_cached: NDArray[float64] | None = utils.load_from_cache(
-        path, constants.USE_CACHE_PART2)
+        path, constants.USE_CACHE_PART2_DATA)
     if sa_column_cached is not None:
         return
 
@@ -261,7 +281,7 @@ def calculate_sa_array(graph: nx.Graph, nodes_len: int, path: Path):
 def calculate_spa_array(graph: nx.Graph, nodes_len: int, path: Path):
     logging.debug("start calculate_spa_array")
     spa_column_cached: NDArray[float64] | None = utils.load_from_cache(
-        path, constants.USE_CACHE_PART2)
+        path, constants.USE_CACHE_PART2_DATA)
     if spa_column_cached is not None:
         return
 
@@ -292,7 +312,7 @@ def networks_calculations(graph_tlow: nx.Graph, graph_tupper: nx.Graph, id_to_in
     calculate_sdg_array(graph_tlow, nodes_len,
                         part2_cache_dir.joinpath("sdg_column_tlow"))
     calculate_scn_array(
-        graph_tlow, nodes_len, part2_cache_dir.joinpath("scn_column_tlow"))
+        graph_tlow, nodes, nodes_len, part2_cache_dir.joinpath("scn_column_tlow"))
     calculate_sjc_array(
         graph_tlow, nodes_len, part2_cache_dir.joinpath("sjc_column_tlow"))
     calculate_sa_array(graph_tlow, nodes_len,
@@ -305,7 +325,7 @@ def networks_calculations(graph_tlow: nx.Graph, graph_tupper: nx.Graph, id_to_in
     calculate_sdg_array(graph_tupper, nodes_len,
                         part2_cache_dir.joinpath("sdg_column_tupper"))
     calculate_scn_array(
-        graph_tupper, nodes_len, part2_cache_dir.joinpath("scn_column_tuper"))
+        graph_tupper, nodes, nodes_len, part2_cache_dir.joinpath("scn_column_tuper"))
     calculate_sjc_array(
         graph_tupper, nodes_len, part2_cache_dir.joinpath("sjc_column_tupper"))
     calculate_sa_array(
