@@ -101,11 +101,21 @@ def plot_edges(plots_dir: Path, indexes: list[int], all_edges_tlow: list[int], a
     plt.show(block=block)
 
 
+def calculate_sources_targets(nodes_len: int, part2_cache_dir: Path):
+    logging.debug("start calculate_nodes_indexes")
+    sources_path = part2_cache_dir.joinpath("sources_column")
+    targets_path = part2_cache_dir.joinpath("targets_column")
+    if Path.exists(sources_path) and Path.exists(targets_path):
+        return
+
+    sources, targets = np.triu_indices(nodes_len)
+    utils.dump_to_cache(sources_path, sources)
+    utils.dump_to_cache(targets_path, targets)
+
+
 def calculate_adjacency_matrix(graph: nx.Graph, nodes_len: int, path: Path):
     logging.debug("start calculate_adjacency_matrix")
-    adjacency_column_cached: NDArray[float64] | None = utils.load_from_cache(
-        path, constants.USE_CACHE_PART2_DATA)
-    if adjacency_column_cached is not None:
+    if Path.exists(path):
         return
 
     adjacency_matrix: NDArray[float64] = nx.to_numpy_array(
@@ -143,9 +153,7 @@ def calculate_dgeodesic_array(graph: nx.Graph, nodes_len: int):
 
 def calculate_sdg_array(graph: nx.Graph, nodes_len: int, path: Path):
     logging.debug("start calculate_sdg_array")
-    sdg_column_cached: NDArray[float64] | None = utils.load_from_cache(
-        path, constants.USE_CACHE_PART2_DATA)
-    if sdg_column_cached is not None:
+    if Path.exists(path):
         return
 
     sdg_array: NDArray[float64] = np.negative(
@@ -180,9 +188,7 @@ def calculate_sdg_array(graph: nx.Graph, nodes_len: int, path: Path):
 
 def calculate_scn_array(graph: nx.Graph, nodes: NDArray[int64], nodes_len: int, path: Path):
     logging.debug("start calculate_scn_array")
-    scn_column_cached: NDArray[float64] | None = utils.load_from_cache(
-        path, constants.USE_CACHE_PART2_DATA)
-    if scn_column_cached is not None:
+    if Path.exists(path):
         return
 
     # scn_array: NDArray[float64] = np.zeros(
@@ -234,9 +240,7 @@ def calculate_scn_array(graph: nx.Graph, nodes: NDArray[int64], nodes_len: int, 
 
 def calculate_sjc_array(graph: nx.Graph, nodes_len: int, path: Path):
     logging.debug("start calculate_sjc_array")
-    sjc_column_cached: NDArray[float64] | None = utils.load_from_cache(
-        path, constants.USE_CACHE_PART2_DATA)
-    if sjc_column_cached is not None:
+    if Path.exists(path):
         return
 
     sjc_array: NDArray[float64] = np.zeros(
@@ -257,9 +261,7 @@ def calculate_sjc_array(graph: nx.Graph, nodes_len: int, path: Path):
 
 def calculate_sa_array(graph: nx.Graph, nodes_len: int, path: Path):
     logging.debug("start calculate_sa_array")
-    sa_column_cached: NDArray[float64] | None = utils.load_from_cache(
-        path, constants.USE_CACHE_PART2_DATA)
-    if sa_column_cached is not None:
+    if Path.exists(path):
         return
 
     sa_array: NDArray[float64] = np.zeros(
@@ -280,9 +282,7 @@ def calculate_sa_array(graph: nx.Graph, nodes_len: int, path: Path):
 
 def calculate_spa_array(graph: nx.Graph, nodes_len: int, path: Path):
     logging.debug("start calculate_spa_array")
-    spa_column_cached: NDArray[float64] | None = utils.load_from_cache(
-        path, constants.USE_CACHE_PART2_DATA)
-    if spa_column_cached is not None:
+    if Path.exists(path):
         return
 
     spa_array: NDArray[float64] = np.zeros(
@@ -306,6 +306,8 @@ def networks_calculations(graph_tlow: nx.Graph, graph_tupper: nx.Graph, id_to_in
     nodes: NDArray[int64] = np.array(graph_tlow.nodes)
     nodes.sort()
     nodes_len: int = len(nodes)
+    # nodes pairs
+    calculate_sources_targets(nodes_len, part2_cache_dir)
     # tlow
     calculate_adjacency_matrix(
         graph_tlow, nodes_len, part2_cache_dir.joinpath("adjacency_column_tlow"))
@@ -383,7 +385,7 @@ def run_part2(run_part2_input: RunPart2Input) -> RunPart2Output:
 
                 if index == show_part2_indexes[-1]:
                     # if index == 0:
-                    networks_calculations_output = networks_calculations(
+                    networks_calculations(
                         graph_tlow, graph_tupper, id_to_index_dict, part2_cache_dir)
 
     print('indexes', indexes)
