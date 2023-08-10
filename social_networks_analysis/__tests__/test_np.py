@@ -35,7 +35,6 @@ def test_np1():
     print('final_column')
     print(final_column)
 
-
     sources, targets = np.triu_indices(length)
     # nodes_column_list: list[str] = [f'{sources[i]}_{targets[i]}' for i, _ in enumerate(sources)]
     nodes_column = np.empty(len(sources), dtype="U32")
@@ -46,6 +45,11 @@ def test_np1():
     print(nodes_column.dtype)
 
 
+def test_np2():
+    array1 = np.array([1, 2, 3])
+    array2 = np.array([4, 5, 6, 7])
+    array = np.array((array1, array2)).T
+    print('array', array)
 
 # def test_np2():
 #     array = np.array(range(0, 10, 1))

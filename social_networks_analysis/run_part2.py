@@ -327,7 +327,7 @@ def networks_calculations(graph_tlow: nx.Graph, graph_tupper: nx.Graph, id_to_in
     calculate_sdg_array(graph_tupper, nodes_len,
                         part2_cache_dir.joinpath("sdg_column_tupper"))
     calculate_scn_array(
-        graph_tupper, nodes, nodes_len, part2_cache_dir.joinpath("scn_column_tuper"))
+        graph_tupper, nodes, nodes_len, part2_cache_dir.joinpath("scn_column_tupper"))
     calculate_sjc_array(
         graph_tupper, nodes_len, part2_cache_dir.joinpath("sjc_column_tupper"))
     calculate_sa_array(

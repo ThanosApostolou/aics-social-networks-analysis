@@ -4,6 +4,7 @@ import logging
 from run_intro import RunIntroOutput, run_intro
 from run_part1 import run_part1, RunPart1Input
 from run_part2 import RunPart2Output, run_part2, RunPart2Input
+from social_networks_analysis.run_part3 import RunPart3Input, run_part3
 
 
 def main():
@@ -18,6 +19,9 @@ def main():
     # run part2
     run_part2_output: RunPart2Output | None = run_part2(RunPart2Input(run_intro_output.sx_df, run_intro_output.t_min, run_intro_output.t_max,
                                                                       run_intro_output.DT, run_intro_output.dt, run_intro_output.time_spans))
+    # run part3
+    run_part3(RunPart3Input(run_intro_output.sx_df, run_intro_output.t_min, run_intro_output.t_max,
+                            run_intro_output.DT, run_intro_output.dt, run_intro_output.time_spans))
 
     assert run_part2_output is not None
 
