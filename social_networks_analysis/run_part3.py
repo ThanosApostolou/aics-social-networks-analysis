@@ -10,6 +10,7 @@ import networkx as nx
 from matplotlib import pyplot as plt
 import math
 import tensorflow as tf
+from sklearn import preprocessing
 
 from run_intro import RunIntroOutput
 import constants
@@ -37,7 +38,7 @@ def plot_curves(epochs, hist, metrics_names, part3_output_dir: Path):
     plt.ylabel("Value")
     for m in metrics_names:
         x = hist[m]
-        plt.plot(epochs, x, label=m)
+        plt.plot(epochs[1:], x[1:], label=m)
     plt.legend()
     plt.savefig(part3_output_dir.joinpath("train_metrics"))
     plt.show(block=False)
@@ -50,12 +51,13 @@ def create_model(metrics: list, learning_rate: float) -> tf.keras.Sequential:
         tf.keras.layers.Dense(16, activation='relu'),
         tf.keras.layers.Dense(32, activation='relu'),
         tf.keras.layers.Dense(64, activation='relu'),
-        tf.keras.layers.Dropout(0.1),
-        tf.keras.layers.Dense(1, activation=tf.keras.activations.sigmoid)
+        tf.keras.layers.Dense(1, activation=tf.keras.activations.sigmoid),
+        # tf.keras.layers.Dense(2)
     ])
+    #   loss=tf.keras.losses.BinaryCrossentropy(from_logits=False),
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
-                  loss=tf.keras.losses.BinaryCrossentropy(
-                      from_logits=False),
+                #   loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                  loss=tf.keras.losses.BinaryCrossentropy(from_logits=False),
                   metrics=metrics)
     return model
 
@@ -85,6 +87,7 @@ def create_train_sets() -> tuple[NDArray, NDArray]:
 
     train_features = np.column_stack(
         (sdg_column_tlow, scn_column_tlow, sjc_column_tlow, sa_column_tlow, spa_column_tlow))
+    train_features_normalized: NDArray = preprocessing.normalize(train_features, axis=0)
     # training_orig_df = pd.DataFrame(train_features, columns=[
     #     constants.NNDFCOL_SRC, constants.NNDFCOL_DST, constants.NNDFCOL_SDG, constants.NNDFCOL_SCN, constants.NNDFCOL_SJC, constants.NNDFCOL_SA, constants.NNDFCOL_SPA, constants.NNDFCOL_ADJACENCY])
     # logging.debug("write to_csv")
@@ -95,7 +98,7 @@ def create_train_sets() -> tuple[NDArray, NDArray]:
         part2_cache_dir.joinpath("adjacency_column_tlow"), True)
     assert train_labels is not None
     logging.debug("end create_train_sets")
-    return train_features, train_labels
+    return train_features_normalized, train_labels
 
 
 
@@ -134,16 +137,31 @@ def create_test_sets() -> tuple[NDArray, NDArray]:
 
     test_features = np.column_stack(
         (sdg_column_tupper, scn_column_tupper, sjc_column_tupper, sa_column_tupper, spa_column_tupper))
+    test_features_normalized: NDArray = preprocessing.normalize(test_features, axis=0)
     test_labels = utils.load_from_cache(
         part2_cache_dir.joinpath("adjacency_column_tupper"), True)
     assert test_labels is not None
     logging.debug("end create_test_sets")
-    return test_features, test_labels
+    return test_features_normalized, test_labels
 
-def evaluate_model(mymodel: tf.keras.Sequential, batch_size: int):
-    test_features, test_labels = create_test_sets()
-    results = mymodel.evaluate(test_features, test_labels, batch_size=batch_size)
-    return results
+def evaluate_model(mymodel: tf.keras.Sequential, batch_size: int, test_features: NDArray, test_labels: NDArray):
+    evaluation = mymodel.evaluate(test_features, test_labels, batch_size=batch_size)
+    logging.info('evaluation')
+    print(evaluation)
+    return evaluation
+
+
+def predict_model(mymodel: tf.keras.Sequential, batch_size: int, test_features: NDArray, test_labels: NDArray):
+    probability_model = tf.keras.Sequential([mymodel, tf.keras.layers.Softmax()])
+
+    predictions = probability_model.predict(test_features, batch_size=batch_size)
+    predictions = np.argmax((predictions > 0.5), axis=-1)
+    logging.info('test_features[:1000]')
+    logging.info(test_features[:1000])
+    logging.info('predictions[:1000]')
+    logging.info(predictions[:1000])
+    return predictions
+
 
 def run_part3(run_part3_input: RunPart3Input) -> None:
     logging.debug("start part3")
@@ -165,6 +183,7 @@ def run_part3(run_part3_input: RunPart3Input) -> None:
 
     mymodel = create_model(metrics, learning_rate)
     train_model(part3_cache_dir, part3_output_dir, mymodel, metrics_names, epochs, batch_size)
-    results = evaluate_model(mymodel, batch_size)
-    print('results', results)
+    test_features, test_labels = create_test_sets()
+    evaluation = evaluate_model(mymodel, batch_size, test_features, test_labels)
+    predictions = predict_model(mymodel, batch_size, test_features, test_labels)
     logging.debug("end part3")
