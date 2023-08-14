@@ -46,10 +46,15 @@ def test_np1():
 
 
 def test_np2():
-    array1 = np.array([1, 2, 3])
+    array1 = np.array([1, 2, 3, 4])
     array2 = np.array([4, 5, 6, 7])
-    array = np.array((array1, array2)).T
+    array = np.column_stack((array1, array2))
     print('array', array)
+
+
+def test_np3():
+    array = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8])
+    print('np.where(array > 1)', np.where(array > 0.5)[0])
 
 # def test_np2():
 #     array = np.array(range(0, 10, 1))

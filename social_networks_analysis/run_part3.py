@@ -48,7 +48,6 @@ def plot_curves(epochs, hist, metrics_names, part3_output_dir: Path):
 def create_model(metrics: list, learning_rate: float) -> tf.keras.Sequential:
     model = tf.keras.Sequential([
         tf.keras.layers.Flatten(input_shape=(5,)),
-        tf.keras.layers.Dense(16, activation='relu'),
         tf.keras.layers.Dense(32, activation='relu'),
         tf.keras.layers.Dense(64, activation='relu'),
         tf.keras.layers.Dense(1, activation=tf.keras.activations.sigmoid),
@@ -152,14 +151,17 @@ def evaluate_model(mymodel: tf.keras.Sequential, batch_size: int, test_features:
 
 
 def predict_model(mymodel: tf.keras.Sequential, batch_size: int, test_features: NDArray, test_labels: NDArray):
-    probability_model = tf.keras.Sequential([mymodel, tf.keras.layers.Softmax()])
-
-    predictions = probability_model.predict(test_features, batch_size=batch_size)
-    predictions = np.argmax((predictions > 0.5), axis=-1)
-    logging.info('test_features[:1000]')
-    logging.info(test_features[:1000])
-    logging.info('predictions[:1000]')
-    logging.info(predictions[:1000])
+    logging.debug("start predict_model")
+    # probability_model = tf.keras.Sequential([mymodel, tf.keras.layers.Softmax()])
+    predictions = mymodel.predict(test_features, batch_size=batch_size)
+    predictions[predictions > 0.5] = 1
+    predictions[predictions <= 0.5] = 0
+    non_zero_indices = np.where(predictions > 0)[0]
+    logging.info('test_features[non_zero_indices]')
+    logging.info(test_features[non_zero_indices])
+    logging.info('predictions[non_zero_indices]')
+    logging.info(predictions[non_zero_indices])
+    logging.debug("end predict_model")
     return predictions
 
 
@@ -173,10 +175,10 @@ def run_part3(run_part3_input: RunPart3Input) -> None:
         Path.mkdir(part3_cache_dir, exist_ok=True, parents=True)
 
 
-    learning_rate=0.0001
+    learning_rate=0.001
     epochs = 10
     batch_size = 10000
-    metrics = [tf.keras.metrics.BinaryAccuracy(name='binary_accuracy'), tf.keras.metrics.Precision(
+    metrics = [tf.keras.metrics.Accuracy(name='accuracy'), tf.keras.metrics.Precision(
         name='precision'), tf.keras.metrics.Recall(name='recall')]
     metrics_names: list[str] = ['loss']
     metrics_names.extend(list(map(lambda metric: metric.name, metrics)))
