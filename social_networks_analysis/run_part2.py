@@ -208,7 +208,7 @@ def calculate_scn_array(graph: nx.Graph, nodes: NDArray[int64], nodes_len: int, 
                 nx.common_neighbors(graph, i, j)))
             scn_column[counter] = common_neighbors_len
             counter += 1
-    # combination n choose 2 plust diagonal
+    # combination n choose 2 plus diagonal
     assert len(scn_column) == scn_column_len == counter
 
     # scn_column = utils.convert_symetrical_array_to_column(scn_array, nodes_len)

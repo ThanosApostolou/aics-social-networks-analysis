@@ -146,6 +146,7 @@ def create_test_sets() -> tuple[NDArray, NDArray]:
 def evaluate_model(mymodel: tf.keras.Sequential, batch_size: int, test_features: NDArray, test_labels: NDArray):
     evaluation = mymodel.evaluate(test_features, test_labels, batch_size=batch_size)
     logging.info('evaluation')
+    print(mymodel.metrics_names)
     print(evaluation)
     return evaluation
 
@@ -178,7 +179,7 @@ def run_part3(run_part3_input: RunPart3Input) -> None:
     learning_rate=0.001
     epochs = 10
     batch_size = 10000
-    metrics = [tf.keras.metrics.Accuracy(name='accuracy'), tf.keras.metrics.Precision(
+    metrics = [tf.keras.metrics.BinaryAccuracy(name='binary_accuracy'), tf.keras.metrics.Precision(
         name='precision'), tf.keras.metrics.Recall(name='recall')]
     metrics_names: list[str] = ['loss']
     metrics_names.extend(list(map(lambda metric: metric.name, metrics)))
